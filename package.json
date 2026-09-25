@@ -1,6 +1,6 @@
 {
   "name": "estt-community-nextjs",
-  "version": "1.35.7",
+  "version": "1.35.8",
   "private": true,
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
