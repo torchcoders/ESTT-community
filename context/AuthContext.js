@@ -5,6 +5,10 @@ import {
     onAuthStateChanged,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
+    signInAnonymously,
+    linkWithCredential,
+    linkWithPopup,
+    EmailAuthProvider,
     signOut as firebaseSignOut,
     sendEmailVerification,
     GoogleAuthProvider
@@ -25,8 +29,9 @@ export const AuthProvider = ({ children }) => {
 
         let unsubscribeProfile = null;
 
-        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
             if (user) {
+                if (unsubscribeProfile) unsubscribeProfile();
                 setUser(user);
                 // Fetch profile data from Realtime Database
                 const profileRef = ref(db, `users/${user.uid}`);
@@ -42,10 +47,14 @@ export const AuthProvider = ({ children }) => {
                     setLoading(false);
                 });
             } else {
-                setUser(null);
-                setProfile(null);
-                if (unsubscribeProfile) unsubscribeProfile();
-                setLoading(false);
+                try {
+                    await signInAnonymously(auth);
+                } catch (error) {
+                    console.error('Anonymous sign-in failed:', error);
+                    setUser(null);
+                    setProfile(null);
+                    setLoading(false);
+                }
             }
         });
 
@@ -61,6 +70,10 @@ export const AuthProvider = ({ children }) => {
     };
 
     const signUp = (email, password) => {
+        if (auth.currentUser?.isAnonymous) {
+            const credential = EmailAuthProvider.credential(email, password);
+            return linkWithCredential(auth.currentUser, credential);
+        }
         return createUserWithEmailAndPassword(auth, email, password);
     };
 
