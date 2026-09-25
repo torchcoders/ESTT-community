@@ -1,3 +1,10 @@
+## [1.35.10](https://github.com/torchcoders/ESTT-community/compare/v1.35.9...v1.35.10) (2026-09-25)
+
+
+### Bug Fixes
+
+* **drive:** dependency incompatibility ([69c4fef](https://github.com/torchcoders/ESTT-community/commit/69c4fefc0b33af74696e115b379f14e2c2a15679))
+
 ## [1.35.9](https://github.com/torchcoders/ESTT-community/compare/v1.35.8...v1.35.9) (2026-09-25)
 
 
