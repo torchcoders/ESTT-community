@@ -50,9 +50,6 @@ export default function ResourcePage() {
     const [isFavorite, setIsFavorite] = useState(false);
     const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
 
-    // Preview availability for Google-hosted files
-    const [previewAvailable, setPreviewAvailable] = useState(null);
-
     useEffect(() => {
         if (resourceId) {
             fetchResource();
@@ -293,24 +290,27 @@ export default function ResourcePage() {
         return null;
     };
 
-    const isGoogleHostedFile = (url) => {
-        if (!url) return false;
-        return /drive\.google\.com\/file\/d\//.test(url) || /docs\.google\.com\/(?:document|spreadsheets|presentation|forms)\/d\//.test(url);
-    };
-
     const getGoogleWorkspaceEmbedUrl = (url) => {
         if (!url) return null;
 
-        const docsMatch = url.match(/docs\.google\.com\/(?:document|spreadsheets|presentation|forms)\/d\/([a-zA-Z0-9_-]+)/);
-        const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
-        const fileId = (docsMatch && docsMatch[1]) || (driveMatch && driveMatch[1]);
+        // Match general Google Docs/Sheets/Slides/Forms formats
+        // Typically: https://docs.google.com/document/d/FILE_ID/edit
+        // We want to replace /edit, /view, etc. with /preview
+        const googleDocsRegex = /(https:\/\/docs\.google\.com\/(?:document|spreadsheets|presentation|forms)\/d\/[a-zA-Z0-9-_]+)\/(?:edit|view|copy)?(.*)?/i;
 
-        if (!fileId) return null;
+        const match = url.match(googleDocsRegex);
+        if (match && match[1]) {
+            return `${match[1]}/preview`;
+        }
 
-        const proxyUrl = typeof window !== 'undefined'
-            ? `${window.location.origin}/api/file-proxy?url=${encodeURIComponent(url)}`
-            : `/api/file-proxy?url=${encodeURIComponent(url)}`;
-        return `https://docs.google.com/gview?url=${encodeURIComponent(proxyUrl)}&embedded=true`;
+        // Handle drive folder/file sharing links (some can be previewed)
+        const driveRegex = /(https:\/\/drive\.google\.com\/file\/d\/[a-zA-Z0-9-_]+)\/(?:edit|view)?(.*)?/i;
+        const driveMatch = url.match(driveRegex);
+        if (driveMatch && driveMatch[1]) {
+            return `${driveMatch[1]}/preview`;
+        }
+
+        return null;
     };
 
     const isPdfUrl = (url) => {
@@ -579,28 +579,6 @@ export default function ResourcePage() {
         }
     };
 
-    const getPreviewProxyUrl = (url) => {
-        if (!url || !isGoogleHostedFile(url)) return null;
-        return `/api/file-proxy?url=${encodeURIComponent(url)}`;
-    };
-
-    const getDownloadUrl = (url) => {
-        if (isGoogleHostedFile(url)) {
-            return `/api/file-proxy?download=1&url=${encodeURIComponent(url)}`;
-        }
-        return url;
-    };
-
-    useEffect(() => {
-        const downloadUrl = ensureProtocol(resource?.url || resource?.link || resource?.file);
-        const proxyUrl = getPreviewProxyUrl(downloadUrl);
-        if (!proxyUrl) return;
-        setPreviewAvailable(null);
-        fetch(proxyUrl, { method: 'HEAD' })
-            .then((res) => setPreviewAvailable(res.ok))
-            .catch(() => setPreviewAvailable(false));
-    }, [resource]);
-
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -621,43 +599,6 @@ export default function ResourcePage() {
     }
 
     const downloadUrl = ensureProtocol(resource.url || resource.link || resource.file);
-
-    const handleDownload = async (e) => {
-        e.preventDefault();
-        const url = isGoogleHostedFile(downloadUrl) ? getDownloadUrl(downloadUrl) : downloadUrl;
-        if (!isGoogleHostedFile(downloadUrl) && !isPdfUrl(downloadUrl)) {
-            window.open(url, '_blank');
-            return;
-        }
-        try {
-            const res = await fetch(url);
-            const buf = await res.arrayBuffer();
-            const cd = res.headers.get('content-disposition') || '';
-            const fnMatch = cd.match(/filename\*=UTF-8''([^;\n]+)/);
-            const fileName = fnMatch ? decodeURIComponent(fnMatch[1]) : (resource.fileName || resource.title || 'download');
-            const blob = new Blob([buf], { type: 'application/octet-stream' });
-            const blobUrl = URL.createObjectURL(blob);
-            const tmp = document.createElement('a');
-            tmp.href = blobUrl;
-            tmp.download = fileName;
-            tmp.style.display = 'none';
-            document.body.appendChild(tmp);
-            tmp.click();
-            setTimeout(() => {
-                document.body.removeChild(tmp);
-                URL.revokeObjectURL(blobUrl);
-            }, 100);
-        } catch (err) {
-            console.error('Download failed:', err);
-            const tmp = document.createElement('a');
-            tmp.href = url;
-            tmp.download = resource.fileName || resource.title || 'download';
-            tmp.style.display = 'none';
-            document.body.appendChild(tmp);
-            tmp.click();
-            document.body.removeChild(tmp);
-        }
-    };
 
     return (
         <main className="min-h-screen bg-muted/50 py-8 px-4">
@@ -842,72 +783,45 @@ export default function ResourcePage() {
 
                         {!getYouTubeEmbedUrl(downloadUrl) && isPdfUrl(downloadUrl) && (
                             <div className="w-full h-[60vh] sm:h-[600px] md:h-[700px] rounded-xl overflow-hidden border shadow-sm bg-muted transition-all hover:shadow-md">
-                                {isGoogleHostedFile(downloadUrl) ? (
-                                    previewAvailable === false ? (
-                                        <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-                                            <FileText className="w-12 h-12 mb-3 text-muted-foreground" />
-                                            <p className="mb-4 text-muted-foreground">Aperçu non disponible — Téléchargez le fichier</p>
-                                            <Button asChild className="gap-2">
-                                                <a href={getDownloadUrl(downloadUrl)}>
-                                                    <Download className="w-4 h-4" />
-                                                    Télécharger
-                                                </a>
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <iframe
-                                            width="100%"
-                                            height="100%"
-                                            src={getGoogleWorkspaceEmbedUrl(downloadUrl)}
-                                            title="PDF viewer"
-                                            frameBorder="0"
-                                            allowFullScreen
-                                        ></iframe>
-                                    )
-                                ) : (
+                                <object
+                                    data={downloadUrl}
+                                    type="application/pdf"
+                                    width="100%"
+                                    height="100%"
+                                >
                                     <iframe
                                         width="100%"
                                         height="100%"
-                                        src={`https://docs.google.com/gview?url=${encodeURIComponent(downloadUrl)}&embedded=true`}
+                                        src={downloadUrl}
                                         title="PDF viewer"
                                         frameBorder="0"
-                                        allowFullScreen
-                                    ></iframe>
-                                )}
+                                    >
+                                        <div className="flex flex-col items-center justify-center h-full p-6 text-center text-muted-foreground bg-muted/50">
+                                            <FileText className="w-12 h-12 mb-3 text-muted-foreground" />
+                                            <p className="mb-4">Votre navigateur ne supporte pas l'affichage direct des PDF.</p>
+                                            <Button asChild>
+                                                <a href={downloadUrl} target="_blank" rel="noopener noreferrer" className="gap-2">
+                                                    <Download className="w-4 h-4" />
+                                                    Téléchargez le PDF
+                                                </a>
+                                            </Button>
+                                        </div>
+                                    </iframe>
+                                </object>
                             </div>
                         )}
 
                         {!getYouTubeEmbedUrl(downloadUrl) && !isPdfUrl(downloadUrl) && getGoogleWorkspaceEmbedUrl(downloadUrl) && (
-                            previewAvailable === false ? (
-                                <div className="border rounded-xl p-5 sm:p-6 bg-muted hover:bg-muted/80 transition-colors flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 sm:gap-4 shadow-sm hover:shadow-md">
-                                    <div className="flex items-start sm:items-center gap-4 w-full sm:w-auto">
-                                        <div className="p-3 bg-primary/10 rounded-full text-primary shrink-0 mt-1 sm:mt-0">
-                                            <FileText className="w-6 h-6" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="font-semibold text-foreground mb-1 text-base sm:text-lg">{resource.title}</h4>
-                                            <p className="text-sm text-muted-foreground">Aperçu non disponible — Téléchargez le fichier</p>
-                                        </div>
-                                    </div>
-                                    <Button asChild className="w-full sm:w-auto shrink-0 gap-2 font-medium">
-                                        <a href={getDownloadUrl(downloadUrl)}>
-                                            <Download className="w-4 h-4" />
-                                            Télécharger
-                                        </a>
-                                    </Button>
-                                </div>
-                            ) : (
-                                <div className="w-full h-[60vh] sm:h-[600px] md:h-[700px] rounded-xl overflow-hidden border shadow-sm bg-muted transition-all hover:shadow-md">
-                                    <iframe
-                                        width="100%"
-                                        height="100%"
-                                        src={getGoogleWorkspaceEmbedUrl(downloadUrl)}
-                                        title="Google Workspace viewer"
-                                        frameBorder="0"
-                                        allowFullScreen
-                                    ></iframe>
-                                </div>
-                            )
+                            <div className="w-full h-[60vh] sm:h-[600px] md:h-[700px] rounded-xl overflow-hidden border shadow-sm bg-muted transition-all hover:shadow-md">
+                                <iframe
+                                    width="100%"
+                                    height="100%"
+                                    src={getGoogleWorkspaceEmbedUrl(downloadUrl)}
+                                    title="Google Workspace viewer"
+                                    frameBorder="0"
+                                    allowFullScreen
+                                ></iframe>
+                            </div>
                         )}
 
                         {/* Fallback for generic links (Not YouTube, Not PDF, Not Google Workspace) */}
@@ -976,9 +890,11 @@ export default function ResourcePage() {
                     </CardContent>
 
                     <CardFooter className="py-4 border-t flex flex-wrap gap-4 justify-between items-center">
-                        <Button className="gap-2 flex-1 sm:flex-none cursor-pointer" onClick={handleDownload}>
-                            <Download className="w-4 h-4" />
-                            Télécharger
+                        <Button asChild className="gap-2 flex-1 sm:flex-none">
+                            <a href={downloadUrl} target="_blank" rel="noopener noreferrer">
+                                {(resource.type === 'link' || resource.type === 'html') ? <ExternalLink className="w-4 h-4" /> : resource.type === 'video' ? <Play className="w-4 h-4" /> : <Download className="w-4 h-4" />}
+                                {(resource.type === 'link' || resource.type === 'html' || resource.type === 'video') ? 'Ouvrir' : 'Télécharger'}
+                            </a>
                         </Button>
                         <Button variant="outline" size="sm" onClick={handleShare} className="gap-2 text-muted-foreground hover:text-primary flex-1 sm:flex-none">
                             <Share2 className="w-4 h-4" />
