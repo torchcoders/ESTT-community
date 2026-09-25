@@ -16,6 +16,10 @@ export default function DriveTestPage() {
 
     const handleUpload = async () => {
         if (!file) return;
+        if (!user) {
+            setError('Vous devez être connecté pour effectuer cet upload.');
+            return;
+        }
         setLoading(true);
         setError(null);
         setResult(null);
@@ -23,9 +27,11 @@ export default function DriveTestPage() {
         try {
             const formData = new FormData();
             formData.append('file', file);
+            const idToken = await user.getIdToken();
 
             const res = await fetch('/api/upload-drive', {
                 method: 'POST',
+                headers: { Authorization: `Bearer ${idToken}` },
                 body: formData
             });
 

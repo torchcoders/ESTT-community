@@ -1,18 +1,18 @@
 import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
-import { db, ref, get, set } from '@/lib/firebase';
+import { getAdminDb, requireAuthenticatedUser } from '@/lib/firebase-admin';
 
 export const maxDuration = 60;
 
-const CLIENT_ID = "210065801527-qo2vl3cqamubuai4vnn3oldv0rsnm4a3.apps.googleusercontent.com";
-const CLIENT_SECRET = "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";
-const REDIRECT_URI = "http://localhost:3000/api/drive/callback";
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REDIRECT_URI = process.env.GOOGLE_DRIVE_REDIRECT_URI;
 
 const CACHE_PATH = 'adminSettings/driveFolders';
 
 async function getCachedFolderId(cacheKey) {
     try {
-        const snap = await get(ref(db, `${CACHE_PATH}/${cacheKey}`));
+        const snap = await getAdminDb().ref(`${CACHE_PATH}/${cacheKey}`).once('value');
         if (snap.exists()) return snap.val();
     } catch (e) {}
     return null;
@@ -20,7 +20,7 @@ async function getCachedFolderId(cacheKey) {
 
 async function setCachedFolderId(cacheKey, folderId) {
     try {
-        await set(ref(db, `${CACHE_PATH}/${cacheKey}`), folderId);
+        await getAdminDb().ref(`${CACHE_PATH}/${cacheKey}`).set(folderId);
     } catch (e) {}
 }
 
@@ -61,6 +61,7 @@ async function findOrCreateFolder(drive, name, parentId, cacheKey) {
 
 export async function POST(req) {
     try {
+        await requireAuthenticatedUser(req);
         const formData = await req.formData();
         const file = formData.get('file');
 
@@ -77,7 +78,7 @@ export async function POST(req) {
         let refreshToken = process.env.GOOGLE_DRIVE_REFRESH_TOKEN;
 
         if (!refreshToken) {
-            const configSnap = await get(ref(db, 'adminSettings/driveConfig'));
+            const configSnap = await getAdminDb().ref('adminSettings/driveConfig').once('value');
             if (configSnap.exists()) {
                 refreshToken = configSnap.val().refreshToken;
             }

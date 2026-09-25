@@ -213,7 +213,7 @@ export default function ContributePage() {
                     // Uses the new lib/drive.js which calls /api/upload-drive with metadata
                     const uploaded = await uploadResourceFileToDrive(file, folderMetadata, (progress) => {
                         setUploadProgress(progress);
-                    });
+                    }, user);
 
                     if (!uploaded || !uploaded.publicUrl) {
                         throw new Error("Erreur lors de l'upload du fichier.");

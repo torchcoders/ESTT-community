@@ -93,7 +93,7 @@ export default function ContributeDrivePage() {
                 }
 
                 // Uses the new lib/drive.js which calls /api/upload-drive
-                const uploaded = await uploadResourceFile(file);
+                const uploaded = await uploadResourceFile(file, {}, null, user);
                 if (!uploaded || !uploaded.publicUrl) {
                     throw new Error("Erreur lors de l'upload du fichier sur Google Drive.");
                 }
