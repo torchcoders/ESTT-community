@@ -1,3 +1,11 @@
+## [1.35.9](https://github.com/torchcoders/ESTT-community/compare/v1.35.8...v1.35.9) (2026-09-25)
+
+
+### Bug Fixes
+
+* add FIREBASE_PRIVATE_KEY to make an anon contrubution auth in an anon serverless fonction so it can matche the new database rules ([305002d](https://github.com/torchcoders/ESTT-community/commit/305002da7e44e807fdde423c0f536078ac445040))
+* revok old key and move to the .env ([be23207](https://github.com/torchcoders/ESTT-community/commit/be23207cb1c52e91c276462615a8e2aa010541b5))
+
 ## [1.35.8](https://github.com/torchcoders/ESTT-community/compare/v1.35.7...v1.35.8) (2026-09-25)
 
 ## [1.35.7](https://github.com/torchcoders/ESTT-community/compare/v1.35.6...v1.35.7) (2026-09-24)
