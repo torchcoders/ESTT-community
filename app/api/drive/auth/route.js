@@ -1,10 +1,9 @@
 import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
 
-// HARDCODED CREDENTIALS
-const CLIENT_ID = "210065801527-qo2vl3cqamubuai4vnn3oldv0rsnm4a3.apps.googleusercontent.com";
-const CLIENT_SECRET = "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";
-const REDIRECT_URI = "http://localhost:3000/api/drive/callback";
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REDIRECT_URI = process.env.GOOGLE_DRIVE_REDIRECT_URI;
 
 export async function GET(req) {
     const oauth2Client = new google.auth.OAuth2(

@@ -52,3 +52,8 @@ experience.md
 apps/temp
 
 logs
+
+docs
+logs
+instructions.md
+*.log

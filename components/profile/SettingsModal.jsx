@@ -4,17 +4,15 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import {
     // Tab icons
-    UserCog, Palette, Bell, Code2,
+    UserCog, Palette, Bell,
     // Account section icons
-    User, Mail, Camera, Globe, Lock, ShieldOff, CalendarDays, LogOut,
+    User, Mail, Camera, Globe, Lock, CalendarDays, LogOut,
     // Preferences section icons
-    Moon, Sun, Monitor, Sliders, Accessibility, Clock, Ruler,
+    Moon, Sun, Monitor,
     // Notifications section icons
-    BellRing, MessageSquare, Send, Eye, EyeOff, Users, Download, Trash2,
-    // Advanced section icons
-    KeyRound, Webhook, Terminal, FlaskConical,
+    BellRing, Download, Trash2,
     // UI icons
-    X, ChevronRight, Check, Loader2, Upload, AlertCircle,
+    X, ChevronRight, Check, Loader2, Upload,
 } from 'lucide-react';
 import { db, ref, update, get, auth } from '@/lib/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -29,7 +27,6 @@ const TABS = [
     { id: 'account',       label: 'Compte & Sécurité',        icon: UserCog  },
     { id: 'appearance',    label: 'Préférences & Apparence',  icon: Palette  },
     { id: 'notifications', label: 'Notifications & Vie Privée', icon: Bell   },
-    { id: 'advanced',      label: 'Options avancées',         icon: Code2    },
 ];
 
 // ─── Reusable sub-components ──────────────────────────────────────────────────
@@ -58,55 +55,6 @@ function FieldRow({ label, children, htmlFor }) {
             )}
             {children}
         </div>
-    );
-}
-
-function DisabledBadge({ label = 'Bientôt disponible' }) {
-    return (
-        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border uppercase tracking-wide">
-            <span className="w-1.5 h-1.5 rounded-full bg-muted inline-block" />
-            {label}
-        </span>
-    );
-}
-
-function DisabledToggle({ label, description, icon: Icon, checked = false }) {
-    return (
-        <div className="flex items-center justify-between py-3 opacity-50 cursor-not-allowed select-none">
-            <div className="flex items-center gap-3">
-                <div className="p-1.5 bg-muted rounded-md">
-                    <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-                </div>
-                <div>
-                    <p className="text-sm font-medium text-foreground">{label}</p>
-                    {description && <p className="text-xs text-muted-foreground">{description}</p>}
-                </div>
-            </div>
-            <div className="flex items-center gap-2">
-                <DisabledBadge />
-                <div className={`w-10 h-6 rounded-full border-2 flex items-center transition-colors ${checked ? 'bg-muted-foreground border-muted-foreground' : 'bg-muted border-border'}`}>
-                    <div className={`w-4 h-4 rounded-full bg-card shadow-sm transition-transform mx-0.5 ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function DisabledButton({ label, icon: Icon, variant = 'default' }) {
-    const base = variant === 'danger'
-        ? 'border-red-100 text-red-300 bg-red-50/50 dark:border-red-500/30 dark:text-red-400 dark:bg-red-500/10'
-        : 'border-border text-muted-foreground bg-muted';
-    return (
-        <button
-            disabled
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-medium cursor-not-allowed opacity-60 ${base}`}
-        >
-            <span className="flex items-center gap-2">
-                {Icon && <Icon className="w-4 h-4" />}
-                {label}
-            </span>
-            <DisabledBadge />
-        </button>
     );
 }
 
@@ -358,21 +306,6 @@ function AccountTab({ profile, resolvedUid, onClose }) {
                     </button>
                 </div>
 
-                {/* 2FA — disabled */}
-                <div className="mt-3 p-4 rounded-xl border border-border bg-muted/60 opacity-60 cursor-not-allowed">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-muted rounded-lg">
-                                <ShieldOff className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-semibold text-foreground">Authentification à deux facteurs (2FA)</p>
-                                <p className="text-xs text-muted-foreground">Renforcez la sécurité de votre compte.</p>
-                            </div>
-                        </div>
-                        <DisabledBadge label="Coming Soon" />
-                    </div>
-                </div>
             </section>
 
             <Divider />
@@ -416,8 +349,6 @@ function AppearanceTab() {
 
     return (
         <div className="space-y-6">
-
-            {/* Theming */}
             <section>
                 <SectionHeader
                     icon={Palette}
@@ -451,127 +382,123 @@ function AppearanceTab() {
                             </button>
                         );
                     })}
-                    <DisabledToggle icon={Sliders}  label="Couleur d'accentuation" description="Personnalisez la couleur principale" />
                 </div>
             </section>
-
-            <Divider />
-
-            {/* Accessibility */}
-            <section>
-                <SectionHeader
-                    icon={Accessibility}
-                    title="Accessibilité"
-                    description="Ajustez l'interface pour une meilleure expérience."
-                />
-                <div className="space-y-1 divide-y divide-border rounded-xl border border-border overflow-hidden bg-card">
-                    <DisabledToggle icon={Sliders}       label="Mise à l'échelle des polices"   description="Agrandissez ou réduisez le texte"    />
-                    <DisabledToggle icon={Eye}           label="Mode contraste élevé"           description="Améliore la lisibilité"              />
-                    <DisabledToggle icon={Accessibility} label="Optimisation lecteur d'écran"   description="Compatibilité assistive renforcée"   />
-                </div>
-            </section>
-
-            <Divider />
-
-            {/* Localization */}
-            <section>
-                <SectionHeader
-                    icon={Clock}
-                    title="Régionalisation"
-                    description="Configurez votre fuseau horaire et vos formats régionaux."
-                />
-                <div className="space-y-1 divide-y divide-border rounded-xl border border-border overflow-hidden bg-card">
-                    <DisabledToggle icon={Clock}  label="Fuseau horaire"          description="Afrique/Casablanca (UTC+1)"                />
-                    <DisabledToggle icon={CalendarDays} label="Format de date"    description="JJ/MM/AAAA"                               />
-                    <DisabledToggle icon={Ruler}  label="Unités de mesure"        description="Système métrique"                         />
-                </div>
-            </section>
-
-            <div className="flex items-center gap-2 mt-4 p-3 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-700 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-300">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                L'accentuation de couleur, l'accessibilité et la régionalisation sont en cours de développement.
-            </div>
         </div>
     );
 }
 
-function NotificationsTab({ profile, resolvedUid }) {
-    const { showSuccess, showError } = useDialog();
+function NotificationsTab({ profile, resolvedUid, onClose }) {
+    const { showSuccess, showError, showConfirm } = useDialog();
+    const { signOut } = useAuth();
     const [exporting, setExporting] = useState(false);
     const [exportDone, setExportDone] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const handleExportData = async () => {
-        if (!resolvedUid || !profile?.email) return;
+        if (!resolvedUid || !auth?.currentUser) return false;
         setExporting(true);
         setExportDone(false);
+        const downloadWindow = window.open('', '_blank');
 
         try {
-            const username = profile.email?.split('@')[0] || resolvedUid;
+            const idToken = await auth.currentUser.getIdToken();
 
             const res = await fetch('/api/export-data', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    uid:       resolvedUid,
-                    firstName: profile.firstName || 'Utilisateur',
-                    email:     profile.email,
-                    username,
-                }),
+                headers: { Authorization: `Bearer ${idToken}` },
             });
 
             const data = await res.json();
 
             if (!res.ok) throw new Error(data.details || data.error || 'Erreur inconnue');
 
+            if (downloadWindow) {
+                downloadWindow.location.href = data.downloadUrl;
+            } else {
+                window.open(data.downloadUrl, '_blank', 'noopener,noreferrer');
+            }
+
             setExportDone(true);
-            showSuccess(`Demande reçue ! Un email contenant un lien sécurisé de téléchargement à usage unique a été envoyé à ${profile.email}.`);
+            showSuccess('Votre téléchargement a été lancé dans un nouvel onglet.');
+            return true;
 
         } catch (err) {
+            downloadWindow?.close();
             console.error('[Export]', err);
             showError(`Erreur lors de la demande d'export : ${err.message}`);
+            return false;
         } finally {
             setExporting(false);
         }
     };
 
+    const handleDeleteAccount = async () => {
+        if (!resolvedUid || !auth?.currentUser) {
+            showError('Impossible de supprimer ce compte pour le moment.');
+            return;
+        }
+
+        const wantsExport = await showConfirm(
+            'Souhaitez-vous télécharger une copie de vos données avant de supprimer votre compte ?',
+            { type: 'warning', title: 'Exporter vos données ?', confirmLabel: 'Télécharger mes données', cancelLabel: 'Supprimer sans exporter' }
+        );
+
+        if (wantsExport) {
+            const exportStarted = await handleExportData();
+            if (!exportStarted) return;
+        }
+
+        const confirmed = await showConfirm(
+            'Cette action est irréversible. Votre compte, votre profil et vos données seront supprimés définitivement.',
+            { type: 'danger', title: 'Supprimer mon compte', confirmLabel: 'Supprimer le compte' }
+        );
+
+        if (!confirmed) return;
+
+        setDeleting(true);
+
+        try {
+            const idToken = await auth.currentUser.getIdToken();
+            const response = await fetch('/api/account/delete', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${idToken}` },
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'La suppression du compte a échoué.');
+            }
+
+            if (auth.currentUser) {
+                try { await signOut(); } catch (signOutError) { console.error('[SignOut after delete]', signOutError); }
+            }
+
+            onClose?.();
+            showSuccess('Votre compte a bien été supprimé.');
+        } catch (err) {
+            console.error('[Delete account]', err);
+            showError('La suppression du compte a échoué. Réessayez plus tard ou contactez l’assistance.');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
-
-            {/* Notification Channels */}
             <section>
                 <SectionHeader
                     icon={BellRing}
                     title="Canaux de notification"
                     description="Choisissez comment vous souhaitez être notifié."
                 />
-                <div className="space-y-1 divide-y divide-border rounded-xl border border-border overflow-hidden bg-card">
-                    <DisabledToggle icon={BellRing}    label="Notifications push"     description="Alertes en temps réel dans le navigateur" checked />
-                    <DisabledToggle icon={Mail}        label="Notifications par email" description="Résumé quotidien et alertes critiques"     />
-                    <DisabledToggle icon={MessageSquare} label="Notifications SMS"    description="Alertes urgentes par SMS"                  />
-                    <DisabledToggle icon={Send}        label="Résumé d'activité"      description="Rapport hebdomadaire par email"             />
+                <div className="rounded-xl border border-dashed border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+                    Les notifications essentielles restent actives selon votre compte.
                 </div>
             </section>
 
             <Divider />
 
-            {/* Privacy */}
-            <section>
-                <SectionHeader
-                    icon={Eye}
-                    title="Confidentialité"
-                    description="Contrôlez qui peut voir votre profil et vos données."
-                />
-                <div className="space-y-1 divide-y divide-border rounded-xl border border-border overflow-hidden bg-card">
-                    <DisabledToggle icon={Eye}    label="Profil public"           description="Visible par tous les membres"       checked />
-                    <DisabledToggle icon={EyeOff} label="Profil privé"            description="Visible uniquement par vous"               />
-                    <DisabledToggle icon={Users}  label="Partage de données"      description="Améliore les recommandations"       checked />
-                    <DisabledToggle icon={Users}  label="Utilisateurs bloqués"    description="Gérez votre liste de blocage"              />
-                </div>
-            </section>
-
-            <Divider />
-
-            {/* Data management */}
             <section>
                 <SectionHeader
                     icon={Download}
@@ -579,8 +506,6 @@ function NotificationsTab({ profile, resolvedUid }) {
                     description="Exportez ou supprimez vos données personnelles."
                 />
                 <div className="space-y-2">
-
-                    {/* ── ACTIVE: Export button ─────────────────────── */}
                     <button
                         onClick={handleExportData}
                         disabled={exporting || exportDone}
@@ -596,112 +521,35 @@ function NotificationsTab({ profile, resolvedUid }) {
                             {exporting
                                 ? 'Génération en cours…'
                                 : exportDone
-                                ? 'Export envoyé par email ✓'
+                                ? 'Téléchargement lancé ✓'
                                 : 'Exporter mes données personnelles'
                             }
                         </span>
                         {!exporting && !exportDone && (
-<span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 border border-blue-200 uppercase tracking-wide dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/40">
-                                PDF + Email
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 border border-blue-200 uppercase tracking-wide dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/40">
+                                PDF immédiat
                             </span>
                         )}
                     </button>
 
                     {exporting && (
                         <p className="text-xs text-muted-foreground px-1 leading-relaxed animate-pulse">
-                            Génération de votre lien sécurisé temporaire et envoi de l'email en cours…
+                            Préparation de votre téléchargement sécurisé…
                         </p>
                     )}
 
-                    <DisabledButton icon={Trash2} label="Supprimer définitivement mon compte" variant="danger" />
-                </div>
-            </section>
-
-            <div className="flex items-center gap-2 mt-2 p-3 bg-muted border border-border rounded-xl text-xs text-muted-foreground">
-                <AlertCircle className="w-4 h-4 shrink-0 text-muted-foreground" />
-                Les notifications et la suppression de compte seront disponibles prochainement.
-            </div>
-        </div>
-    );
-}
-
-function AdvancedTab({ profile, resolvedUid }) {
-    const { showSuccess, showError } = useDialog();
-    const [capturing, setCapturing] = useState(false);
-
-    const handleTakeScreenshot = async () => {
-        if (!profile?.email) {
-            showError("Impossible d'identifier l'email de l'utilisateur pour le profil.");
-            return;
-        }
-        setCapturing(true);
-        try {
-            const username = profile.email.split('@')[0];
-            // Resolve public URL of user profile
-            const profileUrl = `${window.location.origin}/profile/@${username}`;
-            
-            // Build direct download link through proxy API
-            const downloadUrl = `/api/profile-screenshot?url=${encodeURIComponent(profileUrl)}`;
-            
-            const link = document.createElement('a');
-            link.href = downloadUrl;
-            link.download = `screenshot_${username}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            showSuccess("Capture d'écran lancée ! Elle sera téléchargée automatiquement d'ici quelques secondes.");
-        } catch (err) {
-            console.error('[Screenshot Error]:', err);
-            showError("Erreur lors du lancement de la capture d'écran.");
-        } finally {
-            setCapturing(false);
-        }
-    };
-
-    return (
-        <div className="space-y-6">
-            <section>
-                <SectionHeader
-                    icon={Code2}
-                    title="Options développeur"
-                    description="Fonctionnalités avancées réservées aux développeurs et aux utilisateurs expérimentés."
-                />
-                <div className="space-y-2">
-                    {/* Active: Take profile screenshot */}
                     <button
-                        onClick={handleTakeScreenshot}
-                        disabled={capturing}
-                        className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20"
+                        onClick={handleDeleteAccount}
+                        disabled={deleting}
+                        className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20"
                     >
                         <span className="flex items-center gap-2">
-                            {capturing ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                <Camera className="w-4 h-4" />
-                            )}
-                            {capturing ? 'Génération de la capture…' : 'Capturer et télécharger mon profil public'}
-                        </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 border border-blue-200 uppercase tracking-wide">
-                            Site-Shot API
+                            {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                            {deleting ? 'Suppression en cours…' : 'Supprimer définitivement mon compte'}
                         </span>
                     </button>
-
-                    <DisabledButton icon={KeyRound}     label="Gestion des clés API"                />
-                    <DisabledButton icon={Webhook}      label="Configuration des webhooks"          />
-                    <DisabledButton icon={Terminal}     label="Journal de console (Debug logs)"     />
-                    <DisabledButton icon={FlaskConical} label="Fonctionnalités expérimentales"      />
                 </div>
             </section>
-
-            <div className="p-4 rounded-xl border border-dashed border-border bg-muted text-center">
-                <Code2 className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm font-semibold text-muted-foreground">Section développeur</p>
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-xs mx-auto">
-                    Ces options avancées seront disponibles dans une prochaine mise à jour de la plateforme.
-                </p>
-                <DisabledBadge label="En développement" />
-            </div>
         </div>
     );
 }
@@ -741,8 +589,7 @@ export default function SettingsModal({ isOpen, onClose, profile, resolvedUid })
         switch (activeTab) {
             case 'account':       return <AccountTab profile={profile} resolvedUid={resolvedUid} onClose={onClose} />;
             case 'appearance':    return <AppearanceTab />;
-            case 'notifications': return <NotificationsTab profile={profile} resolvedUid={resolvedUid} />;
-            case 'advanced':      return <AdvancedTab profile={profile} resolvedUid={resolvedUid} />;
+            case 'notifications': return <NotificationsTab profile={profile} resolvedUid={resolvedUid} onClose={onClose} />;
             default:              return null;
         }
     };
@@ -786,7 +633,6 @@ export default function SettingsModal({ isOpen, onClose, profile, resolvedUid })
                         {TABS.map(tab => {
                             const Icon = tab.icon;
                             const isActive = activeTab === tab.id;
-                            const isDisabled = tab.id !== 'account';
                             return (
                                 <button
                                     key={tab.id}
@@ -801,9 +647,6 @@ export default function SettingsModal({ isOpen, onClose, profile, resolvedUid })
                                     <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`} />
                                     <span className="flex-1 leading-tight">{tab.label}</span>
                                     {isActive && <ChevronRight className="w-3 h-3 text-primary/60 shrink-0" />}
-                                    {isDisabled && !isActive && (
-                                        <span className="w-1.5 h-1.5 rounded-full bg-muted shrink-0" />
-                                    )}
                                 </button>
                             );
                         })}

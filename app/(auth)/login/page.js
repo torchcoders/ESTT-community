@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useDialog } from '@/context/DialogContext';
@@ -18,6 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 export default function LoginPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { signIn, signInWithGoogle } = useAuth();
     const { showSuccess } = useDialog();
     const [email, setEmail] = useState('');
@@ -26,6 +27,13 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+    const getRedirectPath = () => {
+        const redirectPath = searchParams.get('redirect');
+        return redirectPath && redirectPath.startsWith('/') && !redirectPath.startsWith('//')
+            ? redirectPath
+            : '/';
+    };
 
 
     const validateEmail = (email) => {
@@ -89,7 +97,7 @@ export default function LoginPage() {
             const { auth } = await import('@/lib/firebase');
             setMessage('Connexion réussie avec Google.');
             const hasReward = await checkAndApplyReward(auth.currentUser);
-            setTimeout(() => router.push('/'), hasReward ? 3500 : 1000);
+            setTimeout(() => router.replace(getRedirectPath()), hasReward ? 3500 : 1000);
         } catch (error) {
             console.error(error);
             setMessage(error.message || 'Erreur lors de la connexion avec Google.');
@@ -172,7 +180,7 @@ export default function LoginPage() {
             const { auth } = await import('@/lib/firebase');
             setMessage('Connexion réussie.');
             const hasReward = await checkAndApplyReward(auth.currentUser);
-            setTimeout(() => router.push('/'), hasReward ? 3500 : 1000);
+            setTimeout(() => router.replace(getRedirectPath()), hasReward ? 3500 : 1000);
         } catch (error) {
             console.error(error);
             setMessage('Identifiants invalides ou erreur de connexion.');

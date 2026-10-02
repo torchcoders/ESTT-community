@@ -7,7 +7,6 @@ import {
     Loader2, ShieldCheck, Download, XCircle, Clock,
     FileText, CheckCircle2, AlertTriangle, Home,
 } from 'lucide-react';
-import { db, ref, get } from '@/lib/firebase';
 
 // ─── Step definitions ─────────────────────────────────────────────────────────
 const STEPS = [
@@ -91,20 +90,16 @@ export default function DownloadExportPage() {
                 throw new Error(verifyData.reason || 'Lien invalide.');
             }
 
-            const { uid, firstName, email, username } = verifyData;
+            const {
+                uid,
+                username,
+                profile,
+                favorites,
+                tickets,
+            } = verifyData;
 
-            // ── Step 2: Fetch all user data from Firebase ─────────────────
+            // ── Step 2: Use the server-side export snapshot ───────────────
             setStep('fetch');
-            const [profileSnap, favSnap, ticketsSnap] = await Promise.all([
-                get(ref(db, `users/${uid}`)),
-                get(ref(db, `userFavorites/${uid}`)),
-                get(ref(db, 'tickets')),
-            ]);
-
-            const profile = profileSnap.exists() ? profileSnap.val() : {};
-            const favorites = favSnap.exists() ? Object.values(favSnap.val()) : [];
-            const allTickets = ticketsSnap.exists() ? ticketsSnap.val() : {};
-            const tickets = Object.values(allTickets).filter(t => t.userId === uid);
             const contributions = profile.contributions
                 ? Object.values(profile.contributions)
                 : [];
@@ -298,6 +293,7 @@ export default function DownloadExportPage() {
             doc.save(pdfFilename);
 
             setDone(true);
+            window.opener?.postMessage({ type: 'estt-export-complete' }, window.location.origin);
 
         } catch (err) {
             console.error('[DownloadExport]', err);

@@ -6,6 +6,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import FloatingAssistant from '@/components/layout/FloatingAssistant';
 import { AuthProvider } from '@/context/AuthContext';
+import AuthGuard from '@/components/providers/AuthGuard';
 import { DialogProvider } from '@/context/DialogContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { ThemeProvider } from '@/components/providers/theme-provider';
@@ -85,16 +86,18 @@ export default function RootLayout({ children }) {
                 <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
                     <DialogProvider>
                         <AuthProvider>
-                            <NotificationProvider>
-                                <LocalDevServiceWorkerCleanup />
-                                <Header />
-                                {children}
-                                <Footer />
-                                <FloatingAssistant />
-                                <div id="spinner-overlay" className="spinner-overlay hidden" aria-hidden="true">
-                                    <div className="spinner" role="status" aria-label="Chargement"></div>
-                                </div>
-                            </NotificationProvider>
+                            <AuthGuard>
+                                <NotificationProvider>
+                                    <LocalDevServiceWorkerCleanup />
+                                    <Header />
+                                    {children}
+                                    <Footer />
+                                    <FloatingAssistant />
+                                    <div id="spinner-overlay" className="spinner-overlay hidden" aria-hidden="true">
+                                        <div className="spinner" role="status" aria-label="Chargement"></div>
+                                    </div>
+                                </NotificationProvider>
+                            </AuthGuard>
                         </AuthProvider>
                     </DialogProvider>
                 </ThemeProvider>

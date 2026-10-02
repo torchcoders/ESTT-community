@@ -106,8 +106,7 @@ export default function Home() {
                         .map(([id, data]) => ({ id, ...data }))
                         .filter(club => club.verified);
 
-                    // Show only first 3 in the clubs section
-                    setClubs(allClubs.slice(0, 3));
+                    setClubs(allClubs);
                 }
                 setLoadingClubs(false);
 

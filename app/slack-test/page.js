@@ -3,18 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getDatabase, ref, onValue, off, query, limitToLast } from 'firebase/database';
-
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyBxyQZhdDbY3CN0G0o0AXPG9hueTXh7_54",
-    authDomain: "estt-community.firebaseapp.com",
-    databaseURL: "https://estt-community-default-rtdb.firebaseio.com",
-    projectId: "estt-community",
-    storageBucket: "estt-community.firebasestorage.app",
-    messagingSenderId: "154353945946",
-    appId: "1:154353945946:web:70546c5aec1bae742b3763",
-    measurementId: "G-SQVSELPERE"
-};
+import { firebaseConfig } from '@/lib/firebase-config';
 
 const SlackTestPage = () => {
     const [events, setEvents] = useState([]);

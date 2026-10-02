@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { db, ref, set, get, update, remove } from '@/lib/firebase';
+import { getAdminDb } from '@/lib/firebase-admin';
 import { verifyEmailTemplate } from '@/lib/email-templates';
 
 export async function POST(req) {
@@ -17,7 +17,7 @@ export async function POST(req) {
             const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
             // 2. Save to RTDB
-            await set(ref(db, `emailVerifications/${uid}`), {
+            await getAdminDb().ref(`emailVerifications/${uid}`).set({
                 code: generatedCode,
                 expiresAt,
                 email
@@ -51,8 +51,8 @@ export async function POST(req) {
             }
 
             // 1. Get code from RTDB
-            const verificationRef = ref(db, `emailVerifications/${uid}`);
-            const snapshot = await get(verificationRef);
+            const verificationRef = getAdminDb().ref(`emailVerifications/${uid}`);
+            const snapshot = await verificationRef.once('value');
 
             if (!snapshot.exists()) {
                 return NextResponse.json({ error: 'Aucun code en cours. Veuillez en demander un nouveau.' }, { status: 400 });
@@ -62,7 +62,7 @@ export async function POST(req) {
 
             // 2. Check expiry
             if (Date.now() > data.expiresAt) {
-                await remove(verificationRef);
+                await verificationRef.remove();
                 return NextResponse.json({ error: 'Code expiré. Veuillez en demander un nouveau.' }, { status: 400 });
             }
 
@@ -72,13 +72,13 @@ export async function POST(req) {
             }
 
             // 4. Success! Update user profile
-            await update(ref(db, `users/${uid}`), {
+            await getAdminDb().ref(`users/${uid}`).update({
                 verifiedEmail: true,
                 verifiedAt: Date.now()
             });
 
             // 5. Cleanup
-            await remove(verificationRef);
+            await verificationRef.remove();
 
             return NextResponse.json({ success: true, message: 'Email vérifié avec succès' });
         }

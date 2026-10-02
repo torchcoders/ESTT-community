@@ -22,7 +22,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { ExternalLink, Search, ArrowUpDown, Users, BookOpen } from 'lucide-react';
+import { ExternalLink, Search, ArrowUpDown, Users, BookOpen, ShieldCheck } from 'lucide-react';
 
 const ROLE_OPTIONS = [
     { value: 'all', label: 'Tous les rôles' },
@@ -39,6 +39,11 @@ const SORT_OPTIONS = [
     { value: 'name_desc', label: 'Nom (Z → A)' },
 ];
 
+const VERIFIED_OPTIONS = [
+    { value: 'all', label: 'Tous les utilisateurs' },
+    { value: 'verified', label: 'Email vérifié' },
+];
+
 const ROLE_BADGE_CLASSES = {
     admin: 'bg-yellow-400 text-white hover:bg-yellow-500 border-none',
     moderator: 'bg-blue-600 text-white hover:bg-blue-700 border-none',
@@ -50,6 +55,7 @@ export default function AdminUsers({ users }) {
     const [sortBy, setSortBy] = useState('newest');
     const [roleFilter, setRoleFilter] = useState('all');
     const [filiereFilter, setFiliereFilter] = useState('all');
+    const [verifiedFilter, setVerifiedFilter] = useState('all');
 
     // Derive unique filières dynamically from data
     const filiereOptions = useMemo(() => {
@@ -73,6 +79,11 @@ export default function AdminUsers({ users }) {
             list = list.filter((u) => (u.filiere || '') === filiereFilter);
         }
 
+        // Verified email filter
+        if (verifiedFilter === 'verified') {
+            list = list.filter((u) => u.verifiedEmail === true);
+        }
+
         // Search filter
         if (search.trim()) {
             const q = search.toLowerCase();
@@ -94,9 +105,9 @@ export default function AdminUsers({ users }) {
         });
 
         return list;
-    }, [users, search, sortBy, roleFilter, filiereFilter]);
+    }, [users, search, sortBy, roleFilter, filiereFilter, verifiedFilter]);
 
-    const activeFilterCount = (roleFilter !== 'all' ? 1 : 0) + (filiereFilter !== 'all' ? 1 : 0);
+    const activeFilterCount = (roleFilter !== 'all' ? 1 : 0) + (filiereFilter !== 'all' ? 1 : 0) + (verifiedFilter !== 'all' ? 1 : 0);
 
     return (
         <div className="space-y-6">
@@ -147,6 +158,31 @@ export default function AdminUsers({ users }) {
                             <DropdownMenuRadioGroup value={roleFilter} onValueChange={setRoleFilter}>
                                 {ROLE_OPTIONS.map((opt) => (
                                     <DropdownMenuRadioItem key={opt.value} value={opt.value} className={`text-sm cursor-pointer ${roleFilter === opt.value && opt.value !== 'all' ? 'text-blue-600 font-bold' : ''}`}>
+                                        {opt.label}
+                                    </DropdownMenuRadioItem>
+                                ))}
+                            </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Verified email filter */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className={`h-9 gap-1.5 shrink-0 ${verifiedFilter !== 'all' ? 'text-blue-600 border-blue-200 bg-blue-50/50 dark:text-blue-300 dark:border-blue-500/40 dark:bg-blue-500/10' : ''}`}>
+                                <ShieldCheck className="w-4 h-4" />
+                                <span className="hidden sm:inline">
+                                    {verifiedFilter === 'all' ? 'Vérification' : VERIFIED_OPTIONS.find((v) => v.value === verifiedFilter)?.label}
+                                </span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                Filtrer par vérification
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuRadioGroup value={verifiedFilter} onValueChange={setVerifiedFilter}>
+                                {VERIFIED_OPTIONS.map((opt) => (
+                                    <DropdownMenuRadioItem key={opt.value} value={opt.value} className={`text-sm cursor-pointer ${verifiedFilter === opt.value && opt.value !== 'all' ? 'text-blue-600 font-bold' : ''}`}>
                                         {opt.label}
                                     </DropdownMenuRadioItem>
                                 ))}
@@ -210,12 +246,12 @@ export default function AdminUsers({ users }) {
                     </DropdownMenu>
 
                     {/* Reset filters */}
-                    {(search || roleFilter !== 'all' || filiereFilter !== 'all' || sortBy !== 'newest') && (
+                    {(search || roleFilter !== 'all' || filiereFilter !== 'all' || verifiedFilter !== 'all' || sortBy !== 'newest') && (
                         <Button
                             variant="ghost"
                             size="sm"
                             className="h-9 text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0 dark:hover:bg-red-500/10"
-                            onClick={() => { setSearch(''); setRoleFilter('all'); setFiliereFilter('all'); setSortBy('newest'); }}
+                            onClick={() => { setSearch(''); setRoleFilter('all'); setFiliereFilter('all'); setVerifiedFilter('all'); setSortBy('newest'); }}
                         >
                             Réinitialiser
                         </Button>

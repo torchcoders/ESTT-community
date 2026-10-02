@@ -1,11 +1,11 @@
 import { google } from 'googleapis';
 import { NextResponse } from 'next/server';
-import { db, ref, set } from '@/lib/firebase';
+import { getAdminDb } from '@/lib/firebase-admin';
 
 // HARDCODED CREDENTIALS FOR TESTING (as requested)
-const CLIENT_ID = "210065801527-qo2vl3cqamubuai4vnn3oldv0rsnm4a3.apps.googleusercontent.com";
-const CLIENT_SECRET = "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";
-const REDIRECT_URI = "http://localhost:3000/api/drive/callback";
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REDIRECT_URI = process.env.GOOGLE_DRIVE_REDIRECT_URI;
 
 export async function GET(req) {
     const { searchParams } = new URL(req.url);
@@ -31,7 +31,7 @@ export async function GET(req) {
         }
 
         // AUTOMATED: Save to Firebase so the app "just works" immediately
-        await set(ref(db, 'adminSettings/driveConfig'), {
+        await getAdminDb().ref('adminSettings/driveConfig').set({
             refreshToken: tokens.refresh_token,
             lastConfigured: Date.now(),
             configuredBy: 'auto-setup'

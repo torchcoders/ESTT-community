@@ -1,6 +1,6 @@
 {
   "name": "estt-community-nextjs",
-  "version": "1.35.5",
+  "version": "1.35.13",
   "private": true,
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
@@ -32,6 +32,7 @@
     "cmdk": "^1.1.1",
     "embla-carousel-react": "^8.6.0",
     "firebase": "^10.7.1",
+    "firebase-admin": "13.6.0",
     "googleapis": "^171.4.0",
     "groq-sdk": "^1.1.2",
     "html5-qrcode": "^2.3.8",

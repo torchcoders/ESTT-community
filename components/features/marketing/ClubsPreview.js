@@ -10,9 +10,9 @@ export default function ClubsPreview({ clubs, loading }) {
             <div className="container">
                 <div className="flex flex-col md:flex-row justify-between items-end mb-8 md:mb-12 gap-4">
                     <div className="max-w-2xl">
-                        <h2 className="text-3xl font-bold tracking-tight text-foreground mb-2 md:mb-4">Nos Clubs</h2>
+                        <h2 className="text-3xl font-bold tracking-tight text-foreground mb-2 md:mb-4">Community Clubs</h2>
                         <p className="text-muted-foreground text-lg">
-                            Rejoignez l'un de nos nombreux clubs et développez vos compétences.
+                            Rejoignez l'un de ESTT nombreux clubs et développez vos compétences.
                         </p>
                     </div>
                     <Link href="/clubs" className="text-primary text-sm font-bold hover:underline shrink-0">
@@ -20,7 +20,7 @@ export default function ClubsPreview({ clubs, loading }) {
                     </Link>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
                     {!loading ? (
                         clubs.length > 0 ? (
                             clubs.map((club) => (
@@ -32,7 +32,7 @@ export default function ClubsPreview({ clubs, loading }) {
                             </div>
                         )
                     ) : (
-                        Array(3).fill(0).map((_, i) => (
+                        Array(4).fill(0).map((_, i) => (
                             <div key={i} className="h-48 rounded-xl bg-muted animate-pulse" />
                         ))
                     )}

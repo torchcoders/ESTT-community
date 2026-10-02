@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, ref, get, update } from '@/lib/firebase';
+import { getAdminDb } from '@/lib/firebase-admin';
 
 /**
  * POST /api/export-data/verify
@@ -25,7 +25,8 @@ export async function POST(req) {
         }
 
         // ── Read token record ─────────────────────────────────────────────
-        const snap = await get(ref(db, `dataExports/${token}`));
+        const exportRef = getAdminDb().ref(`dataExports/${token}`);
+        const snap = await exportRef.once('value');
 
         if (!snap.exists()) {
             return NextResponse.json(
@@ -53,10 +54,21 @@ export async function POST(req) {
         }
 
         // ── Atomically mark as used before returning ──────────────────────
-        await update(ref(db, `dataExports/${token}`), {
+        await exportRef.update({
             used:   true,
             usedAt: Date.now(),
         });
+
+        const [profileSnap, favoritesSnap, ticketsSnap] = await Promise.all([
+            getAdminDb().ref(`users/${record.uid}`).once('value'),
+            getAdminDb().ref(`userFavorites/${record.uid}`).once('value'),
+            getAdminDb().ref('tickets').once('value'),
+        ]);
+
+        const profile = profileSnap.exists() ? profileSnap.val() : {};
+        const favorites = favoritesSnap.exists() ? Object.values(favoritesSnap.val()) : [];
+        const allTickets = ticketsSnap.exists() ? ticketsSnap.val() : {};
+        const tickets = Object.values(allTickets).filter(ticket => ticket.userId === record.uid);
 
         return NextResponse.json({
             valid:     true,
@@ -64,6 +76,9 @@ export async function POST(req) {
             firstName: record.firstName,
             email:     record.email,
             username:  record.username,
+            profile,
+            favorites,
+            tickets,
         });
 
     } catch (error) {

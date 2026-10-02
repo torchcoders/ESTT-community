@@ -21,6 +21,7 @@ import {
 
 export default function Header() {
     const { user, profile, signOut } = useAuth();
+    const isRegisteredUser = user && !user.isAnonymous;
     const pathname = usePathname();
     const { theme, setTheme } = useTheme();
     
@@ -38,7 +39,7 @@ export default function Header() {
     const isSubscribed = profile?.subscription?.expiresAt && profile.subscription.expiresAt > Date.now();
 
     useEffect(() => {
-        if (!user || !db) return;
+        if (!isRegisteredUser || !db) return;
 
         const privateNotifRef = ref(db, `notifications/private/${user.uid}`);
         const unsubPrivate = onValue(privateNotifRef, (snapshot) => {
@@ -58,10 +59,10 @@ export default function Header() {
         return () => {
             unsubPrivate();
         };
-    }, [user, profile, db]);
+    }, [isRegisteredUser, user, profile, db]);
 
     useEffect(() => {
-        if (!user || !db) return;
+        if (!isRegisteredUser || !db) return;
 
         const convRef = ref(db, `userConversations/${user.uid}`);
         const unsubDM = onValue(convRef, (snapshot) => {
@@ -71,7 +72,7 @@ export default function Header() {
         });
 
         return () => unsubDM();
-    }, [user, db]);
+    }, [isRegisteredUser, user, db]);
 
     if (isIndividualDM || isChat) return null;
 
@@ -83,15 +84,17 @@ export default function Header() {
         return pathname === path || pathname.startsWith(`${path}/`);
     };
 
-    const navItems = [
+    const navItems = isRegisteredUser ? [
         { href: '/', label: 'Accueil', icon: Home },
-        { href: '/browse', label: 'Ressources', icon: BookOpen },
-        { href: '/events', label: 'Événements', icon: Calendar },
-        { href: '/contribute', label: 'Contribuer', icon: PlusCircle },
-        { href: '/chat', label: 'Discussion', icon: MessageSquare },
-    ];
+        ...(isRegisteredUser ? [
+            { href: '/browse', label: 'Ressources', icon: BookOpen },
+            { href: '/events', label: 'Événements', icon: Calendar },
+            { href: '/contribute', label: 'Contribuer', icon: PlusCircle },
+            { href: '/chat', label: 'Discussion', icon: MessageSquare },
+        ] : []),
+    ] : [];
 
-    if (user) {
+    if (isRegisteredUser) {
         navItems.push({ href: '/my-list', label: 'Ma Liste', icon: ListPlus });
         navItems.push({ href: '/profile', label: 'Profil', icon: UserIcon });
     }
@@ -144,7 +147,7 @@ export default function Header() {
                         >
                             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                         </button>
-                        {!user ? (
+                        {!isRegisteredUser ? (
                             <>
                                 <Button variant="ghost" asChild>
                                     <Link href="/login">Se connecter</Link>
@@ -195,7 +198,7 @@ export default function Header() {
                     </div>
 
                     {/* Mobile Notifications Bell */}
-                    {user && (
+                    {isRegisteredUser && (
                         <>
                             <Link href="/messages" className="relative p-2 text-muted-foreground hover:text-primary transition-colors md:hidden">
                                 <MessageSquare className="h-5 w-5" />
@@ -267,7 +270,7 @@ export default function Header() {
                             </nav>
 
                             <div className="mt-auto pt-4 border-t border-border pb-2">
-                                {!user ? (
+                                {!isRegisteredUser ? (
                                     <div className="flex flex-col gap-2">
                                         <Button variant="outline" className="w-full justify-center h-11 shadow-none" asChild onClick={() => setOpen(false)}>
                                             <Link href="/login">Se connecter</Link>

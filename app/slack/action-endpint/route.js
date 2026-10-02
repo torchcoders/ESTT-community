@@ -1,18 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDatabase, ref, push, set, serverTimestamp, update, get } from 'firebase/database';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-
-// Firebase configuration (reusing from github-events)
-const firebaseConfig = {
-    apiKey: "AIzaSyBxyQZhdDbY3CN0G0o0AXPG9hueTXh7_54",
-    authDomain: "estt-community.firebaseapp.com",
-    databaseURL: "https://estt-community-default-rtdb.firebaseio.com",
-    projectId: "estt-community",
-    storageBucket: "estt-community.firebasestorage.app",
-    messagingSenderId: "154353945946",
-    appId: "1:154353945946:web:70546c5aec1bae742b3763",
-    measurementId: "G-SQVSELPERE"
-};
+import { firebaseConfig } from '@/lib/firebase-config';
 
 // Initialize Firebase
 let db;

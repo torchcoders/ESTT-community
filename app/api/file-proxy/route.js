@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { db, ref, get } from '@/lib/firebase';
+import { getAdminDb } from '@/lib/firebase-admin';
 
 export const maxDuration = 60;
 
-const CLIENT_ID = "210065801527-qo2vl3cqamubuai4vnn3oldv0rsnm4a3.apps.googleusercontent.com";
-const CLIENT_SECRET = "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";
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 
 function extractFileId(url) {
     if (!url) return null;
@@ -15,7 +15,7 @@ function extractFileId(url) {
 async function getAccessToken() {
     let refreshToken = process.env.GOOGLE_DRIVE_REFRESH_TOKEN;
     if (!refreshToken) {
-        const configSnap = await get(ref(db, 'adminSettings/driveConfig'));
+        const configSnap = await getAdminDb().ref('adminSettings/driveConfig').once('value');
         if (configSnap.exists()) refreshToken = configSnap.val().refreshToken;
     }
     if (!refreshToken) return null;
