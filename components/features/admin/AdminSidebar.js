@@ -57,7 +57,7 @@ export default function AdminSidebar({
             )}
 
             <aside className={`
-                fixed top-0 md:top-16 left-0 z-50 md:z-40 h-screen md:h-[calc(100vh_-_4rem)]
+                fixed md:sticky top-0 md:top-16 left-0 z-50 md:z-40 h-screen md:h-[calc(100vh_-_4rem)]
                 w-64 ${isCollapsed ? 'md:w-24' : ''} bg-card border-r border-border p-6
                 flex flex-col gap-8 ${SMOOTH}
                 ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}

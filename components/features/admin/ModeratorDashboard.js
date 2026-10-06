@@ -149,7 +149,7 @@ export default function ModeratorDashboard() {
                 </Button>
             </div>
 
-            <div className={`flex flex-col md:flex-row flex-grow relative transition-[padding-left] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${isSidebarCollapsed ? 'md:pl-24' : 'md:pl-64'}`}>
+            <div className="flex flex-col md:flex-row flex-grow relative">
                 <ModeratorSidebar
                     activeTab={activeTab}
                     setActiveTab={(tab) => {

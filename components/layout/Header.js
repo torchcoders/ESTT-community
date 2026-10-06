@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname, } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { cn, getUserLevel } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ export default function Header() {
     const { user, profile, signOut } = useAuth();
     const isRegisteredUser = user && !user.isAnonymous;
     const pathname = usePathname();
+    const router = useRouter();
     const { theme, setTheme } = useTheme();
     
     // Hide header in dedicated chat views
@@ -265,6 +266,24 @@ export default function Header() {
                                     >
                                         <item.icon className={cn("w-[22px] h-[22px]", isActive(item.href) ? "opacity-100" : "opacity-70")} />
                                         {item.label}
+                                        {item.href === '/profile' && (profile?.role || '').toLowerCase() === 'admin' && (
+                                            <Badge
+                                                variant="secondary"
+                                                className="bg-yellow-400 text-white border-none text-[10px] font-bold px-2.5 py-1 animate-pulse hover:bg-yellow-500 cursor-pointer"
+                                                onClick={(e) => { e.stopPropagation(); e.preventDefault(); setOpen(false); router.push('/admin'); }}
+                                            >
+                                                ADMIN
+                                            </Badge>
+                                        )}
+                                        {item.href === '/profile' && (profile?.role || '').toLowerCase() === 'moderator' && (
+                                            <Badge
+                                                variant="secondary"
+                                                className="bg-blue-600 text-white border-none text-[10px] font-bold px-2.5 py-1 animate-pulse hover:bg-blue-700 cursor-pointer"
+                                                onClick={(e) => { e.stopPropagation(); e.preventDefault(); setOpen(false); router.push('/moderator'); }}
+                                            >
+                                                MODERATEUR
+                                            </Badge>
+                                        )}
                                     </Link>
                                 ))}
                             </nav>
@@ -307,12 +326,6 @@ export default function Header() {
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-1 gap-1">
-                                            <Button variant="ghost" className="w-full justify-start h-11 px-3 text-muted-foreground hover:text-primary hover:bg-muted rounded-xl gap-3 shadow-none" asChild onClick={() => setOpen(false)}>
-                                                <Link href="/profile">
-                                                    <UserIcon className="w-5 h-5 opacity-70" />
-                                                    <span className="font-medium text-sm">Mon Profil</span>
-                                                </Link>
-                                            </Button>
                                             <Button
                                                 variant="ghost"
                                                 className="w-full justify-start h-11 px-3 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl gap-3 shadow-none"
