@@ -57,3 +57,5 @@ docs
 logs
 instructions.md
 *.log
+
+database-rules-and-backup
