@@ -21,7 +21,7 @@ import { Loader2, ArrowLeft, AlertCircle, CheckCircle2, FileText, Megaphone, Cal
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { sendPrivateNotification, NOTIF_TYPES } from '@/lib/notifications';
-import { generatePDF, generateCertificate, generateAttendanceList, generatePostPDF } from '@/lib/pdfUtils';
+import { generatePDF, generateAllFormResponsesPDF, generateCertificate, generateAttendanceList, generatePostPDF } from '@/lib/pdfUtils';
 import { uploadToImgBB } from '@/lib/uploadUtils';
 
 
@@ -142,6 +142,18 @@ export default function ClubAdminPage() {
         } catch (error) {
             console.error("PDF Export Error:", error);
             setMessage("Erreur lors de l'exportation du PDF");
+        }
+    };
+
+    const handleGenerateAllFormResponsesPDF = async () => {
+        if (!selectedForm || submissions.length === 0) return;
+
+        try {
+            await generateAllFormResponsesPDF(submissions, selectedForm, club);
+            setMessage('Toutes les réponses ont été exportées avec succès');
+        } catch (error) {
+            console.error('Error exporting all form responses:', error);
+            setMessage("Erreur lors de l'exportation des réponses");
         }
     };
 
@@ -2633,10 +2645,18 @@ export default function ClubAdminPage() {
                                             <Button variant="outline" onClick={() => setSelectedForm(null)}>
                                                 <ArrowLeft className="w-4 h-4 mr-2" /> Retour
                                             </Button>
-                                            <div>
+                                            <div className="flex-1">
                                                 <h2 className="text-2xl font-bold">{selectedForm.title}</h2>
                                                 <p className="text-muted-foreground">Réponses reçues</p>
                                             </div>
+                                            <Button
+                                                variant="outline"
+                                                onClick={handleGenerateAllFormResponsesPDF}
+                                                disabled={loadingSubmissions || submissions.length === 0}
+                                            >
+                                                <FileText className="w-4 h-4 mr-2" />
+                                                Exporter toutes les réponses
+                                            </Button>
                                         </div>
 
                                         <Card>
