@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import ProfileCompletionDialog from '@/components/profile/ProfileCompletionDialog';
 import EmailVerificationPrompt from '@/components/profile/EmailVerificationPrompt';
 
-const publicPaths = ['/', '/login', '/signup', '/verify-success'];
+const publicPaths = ['/', '/login', '/signup', '/verify-success', '/clubs'];
 const emailVerificationPromptKey = (uid) => `estt-email-verification-prompt:${uid}`;
 
 export default function AuthGuard({ children }) {

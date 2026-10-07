@@ -55,7 +55,7 @@ export default function ClubAdminPage() {
     const [orgChartItems, setOrgChartItems] = useState([]); // For editing organigram
 
     // Members management
-    const [newMember, setNewMember] = useState({ name: '', email: '', filiere: '' });
+    const [newMember, setNewMember] = useState({ name: '', email: '', filiere: '', role: '', customRole: '' });
     const [addingMember, setAddingMember] = useState(false);
 
     // Logo upload
@@ -879,14 +879,32 @@ export default function ClubAdminPage() {
         setAddingMember(true);
         try {
             const currentMembers = club.members || [];
-            const updatedMembers = [...currentMembers, { ...newMember, id: Date.now() }];
+            const roleLabels = {
+                president: 'Président(e)',
+                vicePresident: 'Vice-Président(e)',
+                secretary: 'Secrétaire',
+                treasurer: 'Trésorier(ère)',
+                technicalLead: 'Responsable Technique',
+                communicationLead: 'Responsable Communication',
+                eventCoordinator: 'Coordinateur(trice) Événements'
+            };
+            const memberRole = newMember.role === 'other'
+                ? newMember.customRole.trim()
+                : roleLabels[newMember.role];
+            const updatedMembers = [...currentMembers, {
+                name: newMember.name,
+                email: newMember.email,
+                filiere: newMember.filiere,
+                role: memberRole,
+                id: Date.now()
+            }];
 
             await update(ref(db, `clubs/${clubId}`), {
                 members: updatedMembers
             });
 
             setClub(prev => ({ ...prev, members: updatedMembers }));
-            setNewMember({ name: '', email: '', filiere: '' });
+            setNewMember({ name: '', email: '', filiere: '', role: '', customRole: '' });
             setMessage('Membre ajouté avec succès');
         } catch (error) {
             console.error('Error adding member:', error);
@@ -1804,7 +1822,7 @@ export default function ClubAdminPage() {
                                         {/* Add Member Form */}
                                         <div className="p-4 bg-muted rounded-lg border">
                                             <h3 className="text-sm font-semibold mb-3">Ajouter un membre</h3>
-                                            <form onSubmit={handleAddMember} className="grid sm:grid-cols-4 gap-3">
+                                            <form onSubmit={handleAddMember} className="grid sm:grid-cols-2 lg:grid-cols-6 gap-3">
                                                 <Input
                                                     placeholder="Nom complet"
                                                     value={newMember.name}
@@ -1829,7 +1847,31 @@ export default function ClubAdminPage() {
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
-                                                <Button type="submit" disabled={addingMember}>
+                                                <Select
+                                                    value={newMember.role}
+                                                    onValueChange={(v) => setNewMember(p => ({ ...p, role: v, customRole: v === 'other' ? p.customRole : '' }))}
+                                                >
+                                                    <SelectTrigger><SelectValue placeholder="Rôle" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="president">Président(e)</SelectItem>
+                                                        <SelectItem value="vicePresident">Vice-Président(e)</SelectItem>
+                                                        <SelectItem value="secretary">Secrétaire</SelectItem>
+                                                        <SelectItem value="treasurer">Trésorier(ère)</SelectItem>
+                                                        <SelectItem value="technicalLead">Responsable Technique</SelectItem>
+                                                        <SelectItem value="communicationLead">Responsable Communication</SelectItem>
+                                                        <SelectItem value="eventCoordinator">Coordinateur(trice) Événements</SelectItem>
+                                                        <SelectItem value="other">Autre</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                {newMember.role === 'other' && (
+                                                    <Input
+                                                        placeholder="Nom du rôle"
+                                                        value={newMember.customRole}
+                                                        onChange={(e) => setNewMember(p => ({ ...p, customRole: e.target.value }))}
+                                                        required
+                                                    />
+                                                )}
+                                                <Button type="submit" disabled={addingMember || !newMember.role || (newMember.role === 'other' && !newMember.customRole.trim())}>
                                                     <Plus className="w-4 h-4 mr-2" /> Ajouter
                                                 </Button>
                                             </form>
@@ -1847,6 +1889,7 @@ export default function ClubAdminPage() {
                                                             <div className="min-w-0 flex-1 w-full break-words">
                                                                 <p className="font-medium text-sm truncate">{member.name}</p>
                                                                 <p className="text-xs text-muted-foreground">{member.email}</p>
+                                                                {member.role && <p className="text-xs text-primary">{member.role}</p>}
                                                             </div>
                                                             <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 w-full shrink-0 sm:w-auto">
                                                                 <Badge variant="secondary" className="text-xs">{member.filiere}</Badge>
