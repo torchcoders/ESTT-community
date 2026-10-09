@@ -905,18 +905,6 @@ export default function ClubAdminPage() {
         setAddingMember(true);
         try {
             const currentMembers = club.members || [];
-            const roleLabels = {
-                president: 'Président(e)',
-                vicePresident: 'Vice-Président(e)',
-                secretary: 'Secrétaire',
-                treasurer: 'Trésorier(ère)',
-                technicalLead: 'Responsable Technique',
-                communicationLead: 'Responsable Communication',
-                eventCoordinator: 'Coordinateur(trice) Événements'
-            };
-            const memberRole = newMember.role === 'other'
-                ? newMember.customRole.trim()
-                : roleLabels[newMember.role];
             const updatedMembers = [...currentMembers, {
                 name: newMember.name,
                 email: newMember.email,
