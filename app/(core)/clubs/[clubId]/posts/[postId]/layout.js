@@ -1,15 +1,15 @@
-import { getAdminDb } from '@/lib/firebase-admin';
+import { getAdminClubBySlug, getAdminDb } from '@/lib/firebase-admin';
 
 export async function generateMetadata({ params }) {
     const { clubId, postId } = params;
 
     try {
         // Fetch club data
-        const clubSnap = await getAdminDb().ref(`clubs/${clubId}`).once('value');
-        const club = clubSnap.exists() ? clubSnap.val() : null;
+        const club = await getAdminClubBySlug(clubId);
+        const databaseClubId = club?.id || clubId;
 
         // Fetch post data
-        const postSnap = await getAdminDb().ref(`clubPosts/${clubId}/${postId}`).once('value');
+        const postSnap = await getAdminDb().ref(`clubPosts/${databaseClubId}/${postId}`).once('value');
 
         if (!postSnap.exists()) {
             return {
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }) {
                 title: post.title,
                 description: post.content?.substring(0, 160) || `${typeLabel} publiée par ${clubName}`,
                 type: 'article',
-                url: `https://estt.ma/clubs/${clubId}/posts/${postId}`,
+                url: `https://estt.ma/clubs/${club?.username || databaseClubId}/posts/${postId}`,
                 publishedTime: post.createdAt ? new Date(post.createdAt).toISOString() : undefined,
                 authors: post.author ? [post.author] : undefined,
                 images: post.imageUrl ? [

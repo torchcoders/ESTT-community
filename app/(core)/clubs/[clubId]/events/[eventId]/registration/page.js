@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, ArrowLeft, CheckCircle2, Calendar, MapPin, Users, Ticket, AlertCircle, Clock } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { getClubBySlug, getClubPath } from '@/lib/clubUtils';
 
 export default function EventRegistrationPage() {
     const params = useParams();
@@ -35,13 +36,15 @@ export default function EventRegistrationPage() {
 
             try {
                 // Fetch Club
-                const clubSnap = await get(ref(db, `clubs/${clubId}`));
-                if (clubSnap.exists()) {
-                    setClub(clubSnap.val());
+                const clubData = await getClubBySlug(clubId);
+                if (!clubData) {
+                    setError("Club introuvable");
+                    return;
                 }
+                setClub(clubData);
 
                 // Fetch Event
-                const eventSnap = await get(ref(db, `clubs/${clubId}/events/${eventId}`));
+                const eventSnap = await get(ref(db, `clubs/${clubData.id}/events/${eventId}`));
                 if (eventSnap.exists()) {
                     const eventData = eventSnap.val();
                     setEvent(eventData);
@@ -179,7 +182,7 @@ export default function EventRegistrationPage() {
             }
 
             // 5. Update Registration Count (Only for free/manual events here, paid is done in webhook or after redirect)
-            const eventRef = ref(db, `clubs/${clubId}/events/${eventId}`);
+            const eventRef = ref(db, `clubs/${club.id}/events/${eventId}`);
             await update(eventRef, {
                 registrationCount: increment(1)
             });
@@ -258,7 +261,7 @@ export default function EventRegistrationPage() {
                             </Link>
                         </Button>
                         <Button variant="ghost" asChild className="text-muted-foreground hover:text-foreground text-xs font-semibold rounded-xl">
-                            <Link href={`/clubs/${clubId}`}>Retour</Link>
+                            <Link href={getClubPath(club)}>Retour</Link>
                         </Button>
                     </div>
                 </div>
@@ -299,7 +302,7 @@ export default function EventRegistrationPage() {
                             </Link>
                         </Button>
                         <Button variant="ghost" asChild className="text-muted-foreground hover:text-foreground text-xs font-semibold rounded-xl">
-                            <Link href={`/clubs/${clubId}`}>Fermer</Link>
+                            <Link href={getClubPath(club)}>Fermer</Link>
                         </Button>
                     </div>
                 </div>
@@ -315,7 +318,7 @@ export default function EventRegistrationPage() {
             <div className="container max-w-2xl mx-auto px-6 py-12">
                 {/* Back Button */}
                 <Button variant="ghost" asChild className="mb-12 text-muted-foreground hover:text-foreground transition-colors rounded-lg group -ml-2">
-                    <Link href={`/clubs/${clubId}`} className="flex items-center gap-2">
+                    <Link href={getClubPath(club)} className="flex items-center gap-2">
                         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                         <span>Retour</span>
                     </Link>

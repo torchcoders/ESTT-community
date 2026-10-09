@@ -1,19 +1,16 @@
-import { getAdminDb } from '@/lib/firebase-admin';
+import { getAdminClubBySlug } from '@/lib/firebase-admin';
 
 export async function generateMetadata({ params }) {
     const { clubId } = params;
 
     try {
-        const clubSnap = await getAdminDb().ref(`clubs/${clubId}`).once('value');
-
-        if (!clubSnap.exists()) {
+        const club = await getAdminClubBySlug(clubId);
+        if (!club) {
             return {
                 title: 'Club non trouvé',
                 description: 'Ce club n\'existe pas ou n\'est pas disponible',
             };
         }
-
-        const club = clubSnap.val();
 
         return {
             title: club.name,
@@ -29,7 +26,7 @@ export async function generateMetadata({ params }) {
                 title: club.name,
                 description: club.description || `Découvrez ${club.name}, un club étudiant de l'EST Tétouan`,
                 type: 'website',
-                url: `https://estt.ma/clubs/${clubId}`,
+                url: `https://estt.ma/clubs/${club.username || club.id}`,
                 images: club.logo ? [
                     {
                         url: club.logo,

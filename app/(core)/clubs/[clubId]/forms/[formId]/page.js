@@ -15,6 +15,7 @@ import { Loader2, CheckCircle2, ArrowLeft, AlertCircle, Download } from 'lucide-
 import Image from 'next/image';
 import Link from 'next/link';
 import { generatePDF } from '@/lib/pdfUtils';
+import { getClubBySlug, getClubPath } from '@/lib/clubUtils';
 
 export default function CustomFormPage() {
     const params = useParams();
@@ -61,14 +62,16 @@ export default function CustomFormPage() {
     const fetchData = async () => {
         try {
             // Fetch Club
-            const clubRef = ref(db, `clubs/${clubId}`);
-            const clubSnap = await get(clubRef);
-            if (clubSnap.exists()) {
-                setClub(clubSnap.val());
+            const clubData = await getClubBySlug(clubId);
+            if (clubData) setClub(clubData);
+            if (!clubData) {
+                setError('Club introuvable');
+                setLoading(false);
+                return;
             }
 
             // Fetch Form
-            const formRef = ref(db, `clubs/${clubId}/forms/${formId}`);
+            const formRef = ref(db, `clubs/${clubData.id}/forms/${formId}`);
             const formSnap = await get(formRef);
 
             if (!formSnap.exists()) {
@@ -107,7 +110,7 @@ export default function CustomFormPage() {
             }
 
             // Create submission
-            const submissionRef = push(ref(db, `clubs/${clubId}/formSubmissions/${formId}`));
+            const submissionRef = push(ref(db, `clubs/${club.id}/formSubmissions/${formId}`));
             const submissionId = submissionRef.key;
 
 
@@ -167,7 +170,7 @@ export default function CustomFormPage() {
             <div className="min-h-screen flex flex-col items-center justify-center gap-4">
                 <p className="text-xl text-muted-foreground">{error || 'Introuvable'}</p>
                 <Button asChild>
-                    <Link href={`/clubs/${clubId}`}>Retour au club</Link>
+                    <Link href={getClubPath(club)}>Retour au club</Link>
                 </Button>
             </div>
         );
@@ -217,7 +220,7 @@ export default function CustomFormPage() {
                     </CardContent>
                     <CardFooter className="flex flex-col gap-2">
                         <Button asChild variant="outline" className="w-full">
-                            <Link href={`/clubs/${clubId}`}>Retourner au profil du club</Link>
+                            <Link href={getClubPath(club)}>Retourner au profil du club</Link>
                         </Button>
                     </CardFooter>
                 </Card>
@@ -237,7 +240,7 @@ export default function CustomFormPage() {
 
             <div className="max-w-2xl mx-auto space-y-8">
                 <Button variant="ghost" asChild className="mb-4">
-                    <Link href={`/clubs/${clubId}`} className="gap-2">
+                    <Link href={getClubPath(club)} className="gap-2">
                         <ArrowLeft className="w-4 h-4" />
                         Retour au club
                     </Link>

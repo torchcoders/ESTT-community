@@ -15,6 +15,7 @@ import { Loader2, Settings, ArrowLeft, ChevronLeft, ChevronRight, User, Ticket }
 import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { getClubBySlug, getClubPath } from '@/lib/clubUtils';
 
 function FaviconWithFallback({ hostname, alt }) {
     const [attempt, setAttempt] = useState(0);
@@ -92,19 +93,15 @@ export default function ClubProfilePage() {
 
         try {
             // Fetch club data
-            const clubRef = ref(db, `clubs/${clubId}`);
-            const clubSnap = await get(clubRef);
-
-            if (!clubSnap.exists()) {
+            const clubData = await getClubBySlug(clubId);
+            if (!clubData) {
                 router.push('/clubs');
                 return;
             }
-
-            const clubData = { id: clubId, ...clubSnap.val() };
             setClub(clubData);
 
             // Fetch club posts
-            const postsRef = ref(db, `clubPosts/${clubId}`);
+            const postsRef = ref(db, `clubPosts/${clubData.id}`);
             const postsSnap = await get(postsRef);
 
             if (postsSnap.exists()) {
@@ -144,7 +141,7 @@ export default function ClubProfilePage() {
                 const data = snap.val();
                 const tickets = Object.entries(data)
                     .map(([id, t]) => ({ id, ...t }))
-                    .filter(t => t.clubId === clubId)
+                    .filter(t => t.clubId === clubData.id)
                     .sort((a, b) => b.createdAt - a.createdAt);
                 setUserTickets(tickets);
             }
@@ -267,6 +264,7 @@ export default function ClubProfilePage() {
                                                 const standardPlatforms = {
                                                     instagram: 'fa-brands fa-instagram',
                                                     facebook: 'fa-brands fa-facebook',
+                                                    whatsapp: 'fa-brands fa-whatsapp',
                                                     linkedin: 'fa-brands fa-linkedin',
                                                     reddit: 'fa-brands fa-reddit',
                                                     youtube: 'fa-brands fa-youtube',
@@ -305,7 +303,7 @@ export default function ClubProfilePage() {
 
                                     {isAdmin && (
                                         <Button asChild variant="outline" className="gap-2 mt-4">
-                                            <Link href={`/clubs/${clubId}/admin`}>
+                                            <Link href={`${getClubPath(club)}/admin`}>
                                                 <Settings className="w-4 h-4" />
                                                 Administration du club
                                             </Link>
@@ -342,7 +340,7 @@ export default function ClubProfilePage() {
                                             <Badge className="mb-2 bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm px-2 py-0.5 text-[10px] md:text-xs">
                                                 {headerPosts[currentSlide].type === 'announcement' ? 'Annonce' : 'Activité'}
                                             </Badge>
-                                            <Link href={`/clubs/${clubId}/posts/${headerPosts[currentSlide].id}`} className="block group-hover:underline decoration-white/50 underline-offset-4">
+                                            <Link href={`${getClubPath(club)}/posts/${headerPosts[currentSlide].id}`} className="block group-hover:underline decoration-white/50 underline-offset-4">
                                                 <h3 className="text-xl md:text-3xl font-bold text-white mb-2 line-clamp-2 md:line-clamp-1 leading-tight">
                                                     {headerPosts[currentSlide].title}
                                                 </h3>
@@ -420,7 +418,7 @@ export default function ClubProfilePage() {
                                 {clubPosts.map((post) => {
                                     const author = getAuthorInfo(post.author);
                                     return (
-                                        <Link href={`/clubs/${clubId}/posts/${post.id}`} key={post.id} className="group block border border-border rounded-xl overflow-hidden hover:border-primary/50 transition-colors bg-card">
+                                        <Link href={`${getClubPath(club)}/posts/${post.id}`} key={post.id} className="group block border border-border rounded-xl overflow-hidden hover:border-primary/50 transition-colors bg-card">
                                             {post.imageUrl && (
                                                 <div className="relative w-full h-44 bg-muted">
                                                     <Image

@@ -9,6 +9,7 @@ import { Loader2, ArrowLeft, Heart, ClipboardList } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { getClubBySlug, getClubPath } from '@/lib/clubUtils';
 
 export default function PostDetailPage() {
     const params = useParams();
@@ -30,18 +31,18 @@ export default function PostDetailPage() {
     const fetchData = async () => {
         if (!db) return;
         try {
-            const clubSnap = await get(ref(db, `clubs/${clubId}`));
-            if (!clubSnap.exists()) { router.push('/clubs'); return; }
-            setClub({ id: clubId, ...clubSnap.val() });
+            const clubData = await getClubBySlug(clubId);
+            if (!clubData) { router.push('/clubs'); return; }
+            setClub(clubData);
 
-            const postSnap = await get(ref(db, `clubPosts/${clubId}/${postId}`));
-            if (!postSnap.exists()) { router.push(`/clubs/${clubId}`); return; }
+            const postSnap = await get(ref(db, `clubPosts/${clubData.id}/${postId}`));
+            if (!postSnap.exists()) { router.push(getClubPath(clubData)); return; }
 
             const postData = { id: postId, ...postSnap.val() };
             setPost(postData);
 
             if (postData.linkedFormId) {
-                const formSnap = await get(ref(db, `clubs/${clubId}/forms/${postData.linkedFormId}`));
+                const formSnap = await get(ref(db, `clubs/${clubData.id}/forms/${postData.linkedFormId}`));
                 if (formSnap.exists()) setLinkedForm({ id: postData.linkedFormId, ...formSnap.val() });
             }
         } catch (error) {
@@ -76,7 +77,7 @@ export default function PostDetailPage() {
         setLiking(true);
         try {
             const newLikes = getLikeCount(post.likes) + 1;
-            await update(ref(db, `clubPosts/${clubId}/${postId}`), { likes: newLikes });
+            await update(ref(db, `clubPosts/${club.id}/${postId}`), { likes: newLikes });
             setPost(prev => ({ ...prev, likes: newLikes }));
         } catch (error) {
             console.error('Error liking post:', error);
@@ -101,7 +102,7 @@ export default function PostDetailPage() {
             {/* Sticky nav */}
             <nav className="sticky top-0 z-50 bg-background/90 backdrop-blur-md border-b border-border">
                 <div className="max-w-2xl mx-auto px-4 h-13 flex items-center justify-between py-3">
-                    <Link href={`/clubs/${clubId}`} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <Link href={getClubPath(club)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
                         <ArrowLeft className="w-4 h-4" />
                         <span>{club.name}</span>
                     </Link>
@@ -189,7 +190,7 @@ export default function PostDetailPage() {
                             </p>
                         </div>
                         <Button className="rounded-full px-8 font-bold" asChild>
-                            <Link href={`/clubs/${clubId}/forms/${linkedForm.id}`}>Répondre au formulaire</Link>
+                            <Link href={`${getClubPath(club)}/forms/${linkedForm.id}`}>Répondre au formulaire</Link>
                         </Button>
                     </div>
                 )}
@@ -211,7 +212,7 @@ export default function PostDetailPage() {
                             <p className="text-xs text-muted-foreground">Espace Club Officiel</p>
                         </div>
                     </div>
-                    <Link href={`/clubs/${clubId}`} className="text-xs font-bold text-primary hover:underline shrink-0">
+                    <Link href={getClubPath(club)} className="text-xs font-bold text-primary hover:underline shrink-0">
                         Voir le profil →
                     </Link>
                 </div>

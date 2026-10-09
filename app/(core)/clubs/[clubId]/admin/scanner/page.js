@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { db, ref, get, update } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
-import { isClubAdmin } from '@/lib/clubUtils';
+import { getClubBySlug, getClubPath, isClubAdmin } from '@/lib/clubUtils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,7 +23,7 @@ export default function TicketScannerPage() {
     const { user, loading: authLoading } = useAuth();
     const clubId = params.clubId;
 
-    const [, setClub] = useState(null);
+    const [club, setClub] = useState(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
     const [scannedTicket, setScannedTicket] = useState(null);
@@ -62,13 +62,12 @@ export default function TicketScannerPage() {
 
     const checkAccess = async () => {
         try {
-            const clubSnap = await get(ref(db, `clubs/${clubId}`));
-            if (!clubSnap.exists()) {
+            const clubData = await getClubBySlug(clubId);
+            if (!clubData) {
                 router.push('/clubs');
                 return;
             }
 
-            const clubData = { id: clubId, ...clubSnap.val() };
             setClub(clubData);
 
             if (!user) {
@@ -182,7 +181,7 @@ export default function TicketScannerPage() {
             {/* Header */}
             <div className="p-4 flex items-center justify-between border-b border-white/10">
                 <Button variant="ghost" size="sm" asChild className="text-white hover:bg-white/10">
-                    <Link href={`/clubs/${clubId}/admin`}>
+                    <Link href={`${getClubPath(club)}/admin`}>
                         <ArrowLeft className="w-4 h-4 mr-2" /> Admin
                     </Link>
                 </Button>

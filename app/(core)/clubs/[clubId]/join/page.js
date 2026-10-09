@@ -15,6 +15,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { generatePDF } from '@/lib/pdfUtils';
+import { getClubBySlug, getClubPath } from '@/lib/clubUtils';
 
 export default function ClubJoinPage() {
     const params = useParams();
@@ -59,19 +60,17 @@ export default function ClubJoinPage() {
 
     const fetchClubData = async () => {
         try {
-            const clubRef = ref(db, `clubs/${clubId}`);
-            const clubSnap = await get(clubRef);
-
-            if (!clubSnap.exists()) {
+            const clubData = await getClubBySlug(clubId);
+            if (!clubData) {
                 setError('Club not found');
                 setLoading(false);
                 return;
             }
 
-            setClub({ id: clubId, ...clubSnap.val() });
+            setClub(clubData);
 
             // Fetch custom questions
-            const questionsRef = ref(db, `clubs/${clubId}/joinFormQuestions`);
+            const questionsRef = ref(db, `clubs/${clubData.id}/joinFormQuestions`);
             const questionsSnap = await get(questionsRef);
             if (questionsSnap.exists()) {
                 setJoinFormQuestions(questionsSnap.val() || []);
@@ -120,7 +119,7 @@ export default function ClubJoinPage() {
             }
 
             // Create join request
-            const requestRef = push(ref(db, `clubs/${clubId}/joinRequests`));
+            const requestRef = push(ref(db, `clubs/${club.id}/joinRequests`));
             const requestData = {
                 id: requestRef.key,
                 userId: user ? user.uid : null,
@@ -137,7 +136,7 @@ export default function ClubJoinPage() {
             // Trigger Notification to Club Admin
             try {
                 // Check settings
-                const settingsRef = ref(db, `clubs/${clubId}/settings/notifications`);
+                const settingsRef = ref(db, `clubs/${club.id}/settings/notifications`);
                 const settingsSnap = await get(settingsRef);
                 let sendNotif = true;
                 let recipient = '';
@@ -161,7 +160,7 @@ export default function ClubJoinPage() {
                         'Admin Club', // The Club admin name 
                         'Nouvelle Adhésion',
                         `Une nouvelle demande d'adhésion a été reçue de <strong>${formData.name}</strong> (${formData.email}). <br/>Raison: "<em>${formData.reason}</em>"`,
-                        `https://estt.ma/clubs/${clubId}/admin`
+                        `https://estt.ma${getClubPath(club)}/admin`
                     );
 
                     await fetch('/api/send-email', {
@@ -248,7 +247,7 @@ export default function ClubJoinPage() {
                     </CardContent>
                     <CardFooter className="flex flex-col gap-2">
                         <Button asChild variant="outline" className="w-full">
-                            <Link href={`/clubs/${clubId}`}>Retourner au profil du club</Link>
+                            <Link href={getClubPath(club)}>Retourner au profil du club</Link>
                         </Button>
                     </CardFooter>
                 </Card>
@@ -268,7 +267,7 @@ export default function ClubJoinPage() {
 
             <div className="max-w-2xl mx-auto space-y-8">
                 <Button variant="ghost" asChild className="mb-4">
-                    <Link href={`/clubs/${clubId}`} className="gap-2">
+                    <Link href={getClubPath(club)} className="gap-2">
                         <ArrowLeft className="w-4 h-4" />
                         Retour au club
                     </Link>

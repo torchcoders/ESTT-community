@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { getClubPath } from '@/lib/clubUtils';
 
 
 export default function ClubCard({ club }) {
@@ -10,7 +11,7 @@ export default function ClubCard({ club }) {
     };
 
     return (
-        <Link href={`/clubs/${club.id}`} className="h-full">
+        <Link href={getClubPath(club)} className="h-full">
             <div className="group flex flex-col sm:flex-row items-center sm:items-start gap-3 md:gap-4 p-3 md:p-5 bg-card border border-border rounded-xl hover:border-primary/50 transition-colors cursor-pointer h-full text-center sm:text-left">
                 <div className="relative w-10 h-10 md:w-14 md:h-14 rounded-lg overflow-hidden bg-muted flex-shrink-0 border border-border">
                     {club.logo ? (

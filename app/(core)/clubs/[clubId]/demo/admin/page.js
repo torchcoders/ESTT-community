@@ -1250,6 +1250,7 @@ export default function ClubAdminPage() {
                                                 {[
                                                     { id: 'instagram', label: 'Instagram', icon: 'fa-brands fa-instagram' },
                                                     { id: 'facebook', label: 'Facebook', icon: 'fa-brands fa-facebook' },
+                                                    { id: 'whatsapp', label: 'WhatsApp', icon: 'fa-brands fa-whatsapp' },
                                                     { id: 'linkedin', label: 'LinkedIn', icon: 'fa-brands fa-linkedin' },
                                                     { id: 'reddit', label: 'Reddit', icon: 'fa-brands fa-reddit' },
                                                     { id: 'youtube', label: 'YouTube', icon: 'fa-brands fa-youtube' },

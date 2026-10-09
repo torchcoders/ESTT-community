@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { db, ref, get, push, set, update, remove, onValue } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { useDialog } from '@/context/DialogContext';
-import { isClubAdmin, uploadClubImage } from '@/lib/clubUtils';
+import { isClubAdmin, uploadClubImage, getClubBySlug } from '@/lib/clubUtils';
 import { db as staticDb } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,7 @@ export default function ClubAdminPage() {
     const clubId = params.clubId;
 
     const [club, setClub] = useState(null);
+    const databaseClubId = club?.id || clubId;
     const [loading, setLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
     const [message, setMessage] = useState('');
@@ -199,12 +200,13 @@ export default function ClubAdminPage() {
         enabled: true,
         email: ''
     });
+    const [username, setUsername] = useState('');
     const [savingSettings, setSavingSettings] = useState(false);
 
     useEffect(() => {
         if (!db || !clubId) return;
 
-        const settingsRef = ref(db, `clubs/${clubId}/settings/notifications`);
+        const settingsRef = ref(db, `clubs/${databaseClubId}/settings/notifications`);
 
         // We use a separate listener for settings to avoid re-triggering main data fetch
         const unsubSettings = onValue(settingsRef, (snapshot) => {
@@ -230,17 +232,32 @@ export default function ClubAdminPage() {
         });
 
         return () => unsubSettings();
-    }, [clubId, club]); // Depend on club to get president email once loaded
+    }, [databaseClubId, club]); // Depend on club to get president email once loaded
 
     const handleSaveSettings = async (e) => {
         e.preventDefault();
         setSavingSettings(true);
         try {
-            await set(ref(db, `clubs/${clubId}/settings/notifications`), notificationSettings);
+            const normalizedUsername = username.trim().toLowerCase();
+            if (!/^[a-z0-9_-]+$/.test(normalizedUsername)) {
+                throw new Error('Le nom utilisateur doit contenir uniquement des lettres, chiffres, tirets ou underscores.');
+            }
+
+            const clubsSnap = await get(ref(db, 'clubs'));
+            const duplicate = clubsSnap.exists() && Object.entries(clubsSnap.val()).some(([id, data]) =>
+                id !== club.id && data?.username?.toLowerCase() === normalizedUsername
+            );
+            if (duplicate) {
+                throw new Error('Ce nom utilisateur est déjà utilisé par un autre club.');
+            }
+
+            await update(ref(db, `clubs/${club.id}`), { username: normalizedUsername });
+            await set(ref(db, `clubs/${databaseClubId}/settings/notifications`), notificationSettings);
+            setClub(prev => ({ ...prev, username: normalizedUsername }));
             setMessage("Paramètres de notification mis à jour !");
         } catch (err) {
             console.error(err);
-            setMessage("Erreur lors de la sauvegarde.");
+            setMessage(err.message || "Erreur lors de la sauvegarde.");
         } finally {
             setSavingSettings(false);
         }
@@ -255,16 +272,13 @@ export default function ClubAdminPage() {
 
         try {
             // 1. Fetch Club Details
-            const clubRef = ref(db, `clubs/${clubId}`);
-            const clubSnap = await get(clubRef);
-
-            if (!clubSnap.exists()) {
+            const clubData = await getClubBySlug(clubId);
+            if (!clubData) {
                 router.push('/clubs');
                 return;
             }
-
-            const clubData = { id: clubId, ...clubSnap.val() };
             setClub(clubData);
+            setUsername(clubData.username || clubData.id);
 
             // Initialize club info state for editing
             setClubInfo({
@@ -298,7 +312,7 @@ export default function ClubAdminPage() {
             }
 
             // 2. Fetch Posts
-            const postsRef = ref(db, `clubPosts/${clubId}`);
+            const postsRef = ref(db, `clubPosts/${clubData.id}`);
             const postsSnap = await get(postsRef);
             if (postsSnap.exists()) {
                 const postsList = Object.entries(postsSnap.val())
@@ -323,7 +337,7 @@ export default function ClubAdminPage() {
             if (ticketsSnap.exists()) {
                 const ticketsList = Object.entries(ticketsSnap.val())
                     .map(([id, t]) => ({ id, ...t }))
-                    .filter(t => t.clubId === clubId)
+                    .filter(t => t.clubId === clubData.id)
                     .sort((a, b) => b.createdAt - a.createdAt);
                 setTickets(ticketsList);
             } else {
@@ -331,7 +345,7 @@ export default function ClubAdminPage() {
             }
 
             // 4. Fetch Events
-            const eventsRef = ref(db, `clubs/${clubId}/events`);
+            const eventsRef = ref(db, `clubs/${clubData.id}/events`);
             const eventsSnap = await get(eventsRef);
             if (eventsSnap.exists()) {
                 const eventsList = Object.entries(eventsSnap.val())
@@ -356,7 +370,7 @@ export default function ClubAdminPage() {
         setSubmissions([]);
 
         try {
-            const subRef = ref(db, `clubs/${clubId}/formSubmissions/${form.id}`);
+            const subRef = ref(db, `clubs/${databaseClubId}/formSubmissions/${form.id}`);
             const subSnap = await get(subRef);
 
             if (subSnap.exists()) {
@@ -379,7 +393,7 @@ export default function ClubAdminPage() {
         setEditingInfo(true);
 
         try {
-            const clubRef = ref(db, `clubs/${clubId}`);
+            const clubRef = ref(db, `clubs/${databaseClubId}`);
             let updates = {
                 description: clubInfo.description,
                 themeColor: clubInfo.themeColor,
@@ -434,7 +448,7 @@ export default function ClubAdminPage() {
         setSubmittingPost(true);
 
         try {
-            const postsRef = ref(db, `clubPosts/${clubId}`);
+            const postsRef = ref(db, `clubPosts/${databaseClubId}`);
             const newPostRef = push(postsRef);
 
             const postData = {
@@ -464,7 +478,7 @@ export default function ClubAdminPage() {
             const currentMembers = club.members || [];
             if (currentMembers.some(m => m.email === request.email)) {
                 setMessage('Cet utilisateur est déjà membre.');
-                await remove(ref(db, `clubs/${clubId}/joinRequests/${request.id}`)); // Just remove request
+                await remove(ref(db, `clubs/${databaseClubId}/joinRequests/${request.id}`)); // Just remove request
                 fetchClubData();
                 return;
             }
@@ -479,7 +493,7 @@ export default function ClubAdminPage() {
                 joinedAt: joinedAt
             }];
 
-            await update(ref(db, `clubs/${clubId}`), {
+            await update(ref(db, `clubs/${databaseClubId}`), {
                 members: updatedMembers
             });
 
@@ -504,7 +518,7 @@ export default function ClubAdminPage() {
             }
 
             // Remove request
-            await remove(ref(db, `clubs/${clubId}/joinRequests/${request.id}`));
+            await remove(ref(db, `clubs/${databaseClubId}/joinRequests/${request.id}`));
 
             setMessage('Demande approuvée. Membre ajouté et email de bienvenue envoyé.');
             fetchClubData();
@@ -516,7 +530,7 @@ export default function ClubAdminPage() {
 
     const handleRejectRequest = async (requestId) => {
         try {
-            await remove(ref(db, `clubs/${clubId}/joinRequests/${requestId}`));
+            await remove(ref(db, `clubs/${databaseClubId}/joinRequests/${requestId}`));
             setMessage('Demande rejetée.');
             fetchClubData();
         } catch (error) {
@@ -698,7 +712,7 @@ export default function ClubAdminPage() {
 
             setCreatingForm(true);
 
-            const formsRef = ref(db, `clubs/${clubId}/forms`);
+            const formsRef = ref(db, `clubs/${databaseClubId}/forms`);
             const newFormRef = push(formsRef);
 
             await set(newFormRef, {
@@ -730,7 +744,7 @@ export default function ClubAdminPage() {
         if (!confirmed) return;
 
         try {
-            await remove(ref(db, `clubs/${clubId}/forms/${formId}`));
+            await remove(ref(db, `clubs/${databaseClubId}/forms/${formId}`));
             // Optionally remove submissions
             // await remove(ref(db, `clubs/${clubId}/formSubmissions/${formId}`));
             setMessage('Formulaire supprimé');
@@ -792,7 +806,7 @@ export default function ClubAdminPage() {
 
             setCreatingEvent(true);
 
-            const eventsRef = ref(db, `clubs/${clubId}/events`);
+            const eventsRef = ref(db, `clubs/${databaseClubId}/events`);
             const newEventRef = push(eventsRef);
 
             await set(newEventRef, {
@@ -836,7 +850,7 @@ export default function ClubAdminPage() {
         if (!confirmed) return;
 
         try {
-            await remove(ref(db, `clubs/${clubId}/events/${eventId}`));
+            await remove(ref(db, `clubs/${databaseClubId}/events/${eventId}`));
             setMessage('Événement supprimé');
             fetchClubData();
         } catch (e) {
@@ -847,7 +861,7 @@ export default function ClubAdminPage() {
 
     const handleDeletePost = async (postId) => {
         try {
-            const postRef = ref(db, `clubPosts/${clubId}/${postId}`);
+            const postRef = ref(db, `clubPosts/${databaseClubId}/${postId}`);
             await remove(postRef);
             setPosts(prev => prev.filter(p => p.id !== postId));
             setMessage('Publication supprimée');
@@ -874,7 +888,7 @@ export default function ClubAdminPage() {
 
     const handleSaveJoinQuestions = async () => {
         try {
-            await set(ref(db, `clubs/${clubId}/joinFormQuestions`), joinFormQuestions);
+            await set(ref(db, `clubs/${databaseClubId}/joinFormQuestions`), joinFormQuestions);
             setMessage('Questions du formulaire mises à jour !');
         } catch (error) {
             console.error(error);
@@ -907,11 +921,11 @@ export default function ClubAdminPage() {
                 name: newMember.name,
                 email: newMember.email,
                 filiere: newMember.filiere,
-                role: memberRole,
+                role: "Member",
                 id: Date.now()
             }];
 
-            await update(ref(db, `clubs/${clubId}`), {
+            await update(ref(db, `clubs/${databaseClubId}`), {
                 members: updatedMembers
             });
 
@@ -938,7 +952,7 @@ export default function ClubAdminPage() {
             const currentMembers = club.members || [];
             const updatedMembers = currentMembers.filter(m => m.email !== memberEmail);
 
-            await update(ref(db, `clubs/${clubId}`), {
+            await update(ref(db, `clubs/${databaseClubId}`), {
                 members: updatedMembers
             });
 
@@ -1468,6 +1482,7 @@ export default function ClubAdminPage() {
                                                 {[
                                                     { id: 'instagram', label: 'Instagram', icon: 'fa-brands fa-instagram' },
                                                     { id: 'facebook', label: 'Facebook', icon: 'fa-brands fa-facebook' },
+                                                    { id: 'whatsapp', label: 'WhatsApp', icon: 'fa-brands fa-whatsapp' },
                                                     { id: 'linkedin', label: 'LinkedIn', icon: 'fa-brands fa-linkedin' },
                                                     { id: 'reddit', label: 'Reddit', icon: 'fa-brands fa-reddit' },
                                                     { id: 'youtube', label: 'YouTube', icon: 'fa-brands fa-youtube' },
@@ -1859,31 +1874,8 @@ export default function ClubAdminPage() {
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
-                                                <Select
-                                                    value={newMember.role}
-                                                    onValueChange={(v) => setNewMember(p => ({ ...p, role: v, customRole: v === 'other' ? p.customRole : '' }))}
-                                                >
-                                                    <SelectTrigger><SelectValue placeholder="Rôle" /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="president">Président(e)</SelectItem>
-                                                        <SelectItem value="vicePresident">Vice-Président(e)</SelectItem>
-                                                        <SelectItem value="secretary">Secrétaire</SelectItem>
-                                                        <SelectItem value="treasurer">Trésorier(ère)</SelectItem>
-                                                        <SelectItem value="technicalLead">Responsable Technique</SelectItem>
-                                                        <SelectItem value="communicationLead">Responsable Communication</SelectItem>
-                                                        <SelectItem value="eventCoordinator">Coordinateur(trice) Événements</SelectItem>
-                                                        <SelectItem value="other">Autre</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                {newMember.role === 'other' && (
-                                                    <Input
-                                                        placeholder="Nom du rôle"
-                                                        value={newMember.customRole}
-                                                        onChange={(e) => setNewMember(p => ({ ...p, customRole: e.target.value }))}
-                                                        required
-                                                    />
-                                                )}
-                                                <Button type="submit" disabled={addingMember || !newMember.role || (newMember.role === 'other' && !newMember.customRole.trim())}>
+             
+                                                <Button type="submit" disabled={addingMember}>
                                                     <Plus className="w-4 h-4 mr-2" /> Ajouter
                                                 </Button>
                                             </form>
@@ -3092,6 +3084,19 @@ export default function ClubAdminPage() {
                                     </CardHeader>
                                     <CardContent>
                                         <form onSubmit={handleSaveSettings} className="space-y-6">
+                                            <div className="space-y-2">
+                                                <Label>Nom utilisateur du club</Label>
+                                                <Input
+                                                    value={username}
+                                                    onChange={(e) => setUsername(e.target.value)}
+                                                    placeholder={club?.id}
+                                                    pattern="[A-Za-z0-9_-]+"
+                                                    required
+                                                />
+                                                <p className="text-xs text-muted-foreground">
+                                                    Utilisé dans les liens publics du club. Si vous ne le modifiez pas, l&apos;identifiant actuel est utilisé.
+                                                </p>
+                                            </div>
                                             <h3 className="text-sm font-medium">Notifications</h3>
                                             <div className="flex items-center space-x-2 border p-4 rounded-md bg-muted">
                                                 <input

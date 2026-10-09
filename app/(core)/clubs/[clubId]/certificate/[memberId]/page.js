@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { db, ref, get } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { Loader2, Download, ArrowLeft, Award, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { generateCertificate, getCertificateSignature } from '@/lib/pdfUtils';
+import { getClubBySlug, getClubPath } from '@/lib/clubUtils';
 
 export default function CertificatePage() {
     const params = useParams();
@@ -29,14 +29,12 @@ export default function CertificatePage() {
     const fetchData = async () => {
         try {
             // Fetch Club
-            const clubRef = ref(db, `clubs/${clubId}`);
-            const clubSnap = await get(clubRef);
-            if (!clubSnap.exists()) {
+            const clubData = await getClubBySlug(clubId);
+            if (!clubData) {
                 setError('Club introuvable');
                 return;
             }
-            const clubData = clubSnap.val();
-            setClub({ id: clubId, ...clubData });
+            setClub(clubData);
 
             // Find Member in club members list
             const members = clubData.members || [];
@@ -50,7 +48,7 @@ export default function CertificatePage() {
 
             // Auto-trigger generation after a short delay to ensure UI is ready
             setTimeout(() => {
-                handleDownload(foundMember, { id: clubId, ...clubData });
+                handleDownload(foundMember, clubData);
             }, 1500);
 
         } catch (err) {
@@ -152,7 +150,7 @@ export default function CertificatePage() {
                         )}
                     </Button>
                     <Button asChild variant="ghost" className="w-full">
-                        <Link href={`/clubs/${clubId}`}>
+                        <Link href={getClubPath(club)}>
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Retourner au profil du club
                         </Link>
