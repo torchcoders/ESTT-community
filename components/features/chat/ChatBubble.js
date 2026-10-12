@@ -1028,19 +1028,34 @@ export default function ChatBubble({ message, isOwn, onReact, onDelete, onReply,
 }
 
 function ResourceCard({ resource, isOwn: _isOwn }) {
+    const previewUrl = resource.previewImageUrl;
+
     return (
         <div className="p-0.5">
             <Link
                 href={`/resource/${resource.id}`}
                 className="block w-full max-w-[260px] md:max-w-none group/resource bg-card/60 backdrop-blur-sm border border-border/60 rounded-xl overflow-hidden hover:bg-card hover:border-primary/30 transition-all shadow-sm"
             >
+                <div className="relative aspect-video w-full overflow-hidden bg-muted flex items-center justify-center">
+                    {previewUrl ? (
+                        <Image
+                            src={previewUrl}
+                            alt={resource.title}
+                            fill
+                            className="object-cover transition-opacity duration-300 group-hover/resource:opacity-90"
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 260px"
+                        />
+                    ) : (
+                        <div className="p-4 text-muted-foreground/50">
+                            {resource.type === 'pdf' ? <FileText className="w-8 h-8" /> :
+                                resource.type === 'video' ? <Video className="w-8 h-8" /> :
+                                    resource.type === 'link' ? <LinkIcon className="w-8 h-8" /> :
+                                        <BookOpen className="w-8 h-8" />}
+                        </div>
+                    )}
+                </div>
+
                 <div className="flex items-start gap-3 md:gap-4 p-3 md:p-5">
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground group-hover/resource:bg-primary/10 group-hover/resource:text-primary transition-colors shrink-0">
-                        {resource.type === 'pdf' ? <FileText className="w-5 h-5 md:w-6 md:h-6" /> :
-                            resource.type === 'video' ? <Video className="w-5 h-5 md:w-6 md:h-6" /> :
-                                resource.type === 'link' ? <LinkIcon className="w-5 h-5 md:w-6 md:h-6" /> :
-                                    <BookOpen className="w-5 h-5 md:w-6 md:h-6" />}
-                    </div>
                     <div className="flex-1 min-w-0">
                         <p className="text-[13px] md:text-base font-bold text-foreground group-hover/resource:text-primary transition-colors line-clamp-2 leading-tight md:leading-snug">
                             {resource.title}
@@ -1064,7 +1079,15 @@ function ResourceCard({ resource, isOwn: _isOwn }) {
 function ResourceCardSkeleton({ isOwn: _isOwn }) {
     return (
         <div className="p-0.5 animate-pulse">
-            <div className="w-full h-24 bg-card/40 border border-border/50 rounded-xl" />
+            <div className="w-full aspect-video bg-card/40 border border-border/50 rounded-xl" />
+            <div className="p-3 md:p-5 space-y-2">
+                <div className="h-4 bg-muted/50 rounded w-3/4" />
+                <div className="h-3 bg-muted/50 rounded w-1/2" />
+            </div>
+            <div className="bg-muted/50 border-t border-border/50 px-3 md:px-5 py-2 md:py-2.5 flex items-center justify-between">
+                <div className="h-3 bg-muted/50 rounded w-20" />
+                <div className="h-3 bg-muted/50 rounded w-24" />
+            </div>
         </div>
     );
 }
