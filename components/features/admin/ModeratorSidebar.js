@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-const SMOOTH = 'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]';
+const SMOOTH = 'transition-all duration-300 ease-smooth';
 
 export default function ModeratorSidebar({
     activeTab,
@@ -65,7 +65,7 @@ export default function ModeratorSidebar({
                         title={isCollapsed ? 'Déplier le menu' : 'Replier le menu'}
                         className={`hidden md:flex absolute -right-9 top-1 z-10 w-6 h-6 items-center justify-center rounded-full bg-card border border-border shadow-md text-muted-foreground hover:text-foreground hover:bg-accent hover:scale-110 ${SMOOTH}`}
                     >
-                        <ChevronsLeft className={`w-3.5 h-3.5 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${isCollapsed ? 'rotate-180' : ''}`} />
+                        <ChevronsLeft className={`w-3.5 h-3.5 transition-transform duration-300 ease-smooth ${isCollapsed ? 'rotate-180' : ''}`} />
                     </button>
                 </div>
 

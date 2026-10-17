@@ -119,10 +119,11 @@ module.exports = {
 				'2000': '2000ms',
 				'3000': '3000ms',
 			},
-			transitionTimingFunction: {
-				'custom': 'cubic-bezier(0.23,1,0.32,1)',
-				'custom-alt': 'cubic-bezier(0.34,1.56,0.64,1)',
-			}
+		transitionTimingFunction: {
+			'custom': 'cubic-bezier(0.23,1,0.32,1)',
+			'custom-alt': 'cubic-bezier(0.34,1.56,0.64,1)',
+			'smooth': 'cubic-bezier(0.22,1,0.36,1)',
+		}
     	}
     },
     plugins: [

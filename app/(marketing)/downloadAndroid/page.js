@@ -122,12 +122,12 @@ export default function DownloadAndroidPage() {
                                     LE FUTUR DE <br />
                                     <span className="text-blue-500 drop-shadow-[0_0_30px_rgba(59,130,246,0.3)]">L&apos;ESTT</span> EST LÀ.
                                 </h1>
-                                <p className="text-lg md:text-2xl text-gray-400 mb-12 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-light animate-in fade-in slide-in-from-left-10 duration-[1200ms] delay-200">
+                                <p className="text-lg md:text-2xl text-gray-400 mb-12 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-light animate-in fade-in slide-in-from-left-10 duration-1200 delay-200">
                                     EsttPlus est une plateforme complète conçue pour la communauté de l&apos;EST Tétouan. Connectez-vous, partagez et gérez vos événements en toute fluidité.
                                 </p>
 
-                                <div className="flex flex-col sm:flex-row items-center gap-8 justify-center lg:justify-start animate-in fade-in slide-in-from-left-12 duration-[1500ms] delay-500">
-                                    <button className="group relative px-12 py-6 bg-blue-600 rounded-[2rem] font-black text-2xl overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] hover:scale-105 hover:bg-blue-500 hover:shadow-[0_0_50px_rgba(37,99,235,0.4)] active:scale-95 shadow-xl">
+                                <div className="flex flex-col sm:flex-row items-center gap-8 justify-center lg:justify-start animate-in fade-in slide-in-from-left-12 duration-1500 delay-500">
+                                    <button className="group relative px-12 py-6 bg-blue-600 rounded-[2rem] font-black text-2xl overflow-hidden transition-all duration-700 ease-custom hover:scale-105 hover:bg-blue-500 hover:shadow-[0_0_50px_rgba(37,99,235,0.4)] active:scale-95 shadow-xl">
                                         <div className="relative z-10 flex items-center text-white">
                                             <Download className="mr-3 w-7 h-7 animate-bounce" />
                                             TÉLÉCHARGER APK
@@ -147,13 +147,13 @@ export default function DownloadAndroidPage() {
                             </div>
 
                             {/* Hero Image / Mockup */}
-                            <div className="flex-1 relative max-w-sm lg:max-w-none animate-in fade-in zoom-in duration-[1500ms]">
+                            <div className="flex-1 relative max-w-sm lg:max-w-none animate-in fade-in zoom-in duration-1500">
                                 <div className="relative z-10 w-[280px] md:w-[320px] lg:w-[400px] aspect-[9/19] mx-auto rounded-2xl border border-white/10 bg-[#020617] shadow-[0_0_120px_rgba(37,99,235,0.25)] overflow-hidden animate-float">
                                     <Image
                                         src="/assets/images/screenshots/HomeTap.jpeg"
                                         alt="App Interface"
                                         fill
-                                        className="object-cover opacity-90 transition-transform duration-[3000ms] hover:scale-110"
+                                        className="object-cover opacity-90 transition-transform duration-3000 hover:scale-110"
                                         priority
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-60 pointer-events-none" />
@@ -182,7 +182,7 @@ export default function DownloadAndroidPage() {
                                         {stat.icon}
                                         <span className="text-sm font-bold uppercase tracking-[0.25em]">{stat.label}</span>
                                     </div>
-                                    <div className="text-4xl md:text-6xl font-black text-white group-hover/stat:scale-110 group-hover/stat:text-blue-50 transition-transform duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]">
+                                    <div className="text-4xl md:text-6xl font-black text-white group-hover/stat:scale-110 group-hover/stat:text-blue-50 transition-transform duration-700 ease-custom-alt">
                                         {stat.value}
                                     </div>
                                 </div>
@@ -212,10 +212,10 @@ export default function DownloadAndroidPage() {
                             {features.map((feature, i) => (
                                 <div
                                     key={i}
-                                    className="group relative p-10 rounded-[3rem] bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] hover:border-blue-500/40 transition-all duration-[1000ms] ease-[cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-6 overflow-hidden shadow-2xl hover:shadow-blue-500/10"
+                                    className="group relative p-10 rounded-[3rem] bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] hover:border-blue-500/40 transition-all duration-1000 ease-custom hover:-translate-y-6 overflow-hidden shadow-2xl hover:shadow-blue-500/10"
                                 >
                                     <div className="absolute -right-12 -top-12 w-48 h-48 bg-blue-500/5 rounded-full blur-[60px] group-hover:bg-blue-500/20 transition-all duration-1000" />
-                                    <div className="mb-10 p-6 rounded-[1.5rem] bg-white/[0.04] inline-block shadow-inner group-hover:scale-125 group-hover:rotate-[15deg] transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:bg-blue-500/10">
+                                    <div className="mb-10 p-6 rounded-[1.5rem] bg-white/[0.04] inline-block shadow-inner group-hover:scale-125 group-hover:rotate-[15deg] transition-all duration-700 ease-custom-alt group-hover:bg-blue-500/10">
                                         {feature.icon}
                                     </div>
                                     <h3 className="text-3xl font-black mb-6 group-hover:text-white transition-colors duration-500 tracking-tight leading-none uppercase">{feature.title}</h3>
@@ -268,16 +268,16 @@ export default function DownloadAndroidPage() {
                             <div className="flex-1 flex gap-10 h-[900px] overflow-hidden mask-fade-edges relative group/gallery">
                                 <div className="flex flex-col gap-10 animate-scroll-vertical will-change-transform group-hover/gallery:pause-scroll">
                                     {[...screenshots, ...screenshots].map((src, i) => (
-                                        <div key={i} className="w-[240px] md:w-[300px] aspect-[9/19] rounded-2xl border border-white/5 overflow-hidden grayscale hover:grayscale-0 transition-all duration-[1200ms] ease-[cubic-bezier(0.23,1,0.32,1)] hover:scale-105 shadow-[0_45px_100px_-20px_rgba(0,0,0,0.9)] relative group/screenshot">
-                                            <Image src={src} alt="App screen" width={500} height={1000} className="object-cover transition-transform duration-[3000ms] group-hover/screenshot:scale-110" />
+                                        <div key={i} className="w-[240px] md:w-[300px] aspect-[9/19] rounded-2xl border border-white/5 overflow-hidden grayscale hover:grayscale-0 transition-all duration-1200 ease-custom hover:scale-105 shadow-[0_45px_100px_-20px_rgba(0,0,0,0.9)] relative group/screenshot">
+                                            <Image src={src} alt="App screen" width={500} height={1000} className="object-cover transition-transform duration-3000 group-hover/screenshot:scale-110" />
                                             <div className="absolute inset-0 bg-blue-600/0 group-hover/screenshot:bg-blue-600/5 transition-colors duration-1000" />
                                         </div>
                                     ))}
                                 </div>
                                 <div className="flex flex-col gap-10 animate-scroll-vertical-reverse mt-[-400px] hide-mobile will-change-transform group-hover/gallery:pause-scroll">
                                     {[...screenshots, ...screenshots].map((src, i) => (
-                                        <div key={i} className="w-[240px] md:w-[300px] aspect-[9/19] rounded-2xl border border-white/5 overflow-hidden grayscale hover:grayscale-0 transition-all duration-[1200ms] ease-[cubic-bezier(0.23,1,0.32,1)] hover:scale-105 shadow-[0_45px_100px_-20px_rgba(0,0,0,0.9)] relative group/screenshot">
-                                            <Image src={src} alt="App screen" width={500} height={1000} className="object-cover transition-transform duration-[3000ms] group-hover/screenshot:scale-110" />
+                                        <div key={i} className="w-[240px] md:w-[300px] aspect-[9/19] rounded-2xl border border-white/5 overflow-hidden grayscale hover:grayscale-0 transition-all duration-1200 ease-custom hover:scale-105 shadow-[0_45px_100px_-20px_rgba(0,0,0,0.9)] relative group/screenshot">
+                                            <Image src={src} alt="App screen" width={500} height={1000} className="object-cover transition-transform duration-3000 group-hover/screenshot:scale-110" />
                                             <div className="absolute inset-0 bg-blue-600/0 group-hover/screenshot:bg-blue-600/5 transition-colors duration-1000" />
                                         </div>
                                     ))}
@@ -310,7 +310,7 @@ export default function DownloadAndroidPage() {
                                     <a
                                         href="https://expo.dev/artifacts/eas/4QW4Fn5v85oLWxeTcoYeoi.apk"
                                         download
-                                        className="w-full lg:w-auto px-20 py-8 bg-white text-black rounded-[2.5rem] font-black text-3xl hover:bg-blue-600 hover:text-white transition-all duration-[800ms] ease-[cubic-bezier(0.23,1,0.32,1)] hover:scale-110 hover:-rotate-2 shadow-[0_30px_100px_rgba(255,255,255,0.15)] active:scale-95 flex items-center justify-center group/btn"
+                                        className="w-full lg:w-auto px-20 py-8 bg-white text-black rounded-[2.5rem] font-black text-3xl hover:bg-blue-600 hover:text-white transition-all duration-800 ease-custom hover:scale-110 hover:-rotate-2 shadow-[0_30px_100px_rgba(255,255,255,0.15)] active:scale-95 flex items-center justify-center group/btn"
                                     >
                                         <Download className="mr-5 w-9 h-9 group-hover/btn:animate-bounce" />
                                         INSTALLER APK
@@ -340,7 +340,7 @@ export default function DownloadAndroidPage() {
                 <footer className="py-24 border-t border-white/5 text-center relative overflow-hidden bg-[#01030e]">
                     <div className="container mx-auto px-6 relative z-10">
                         <div className="flex flex-col items-center gap-10">
-                            <div className="w-16 h-16 relative opacity-30 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-[2000ms] cursor-help hover:scale-125 hover:rotate-[360deg] rounded-2xl overflow-hidden border border-white/10">
+                            <div className="w-16 h-16 relative opacity-30 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-2000 cursor-help hover:scale-125 hover:rotate-[360deg] rounded-2xl overflow-hidden border border-white/10">
                                 <Image src="/assets/images/screenshots/appIcon.png" alt="Icon" fill className="object-contain" />
                             </div>
                             <div className="flex flex-col gap-2">

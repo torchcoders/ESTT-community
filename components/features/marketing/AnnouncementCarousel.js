@@ -44,7 +44,7 @@ export default function AnnouncementCarousel({
                                             alt={ann.title || "Announcement cover"}
                                             fill
                                             sizes={IMAGE_SIZES.ANNOUNCEMENT_HERO}
-                                            className={cn("object-cover transition-transform duration-[3000ms] ease-out", isActive ? "scale-100" : "scale-105")}
+                                            className={cn("object-cover transition-transform duration-3000 ease-out", isActive ? "scale-100" : "scale-105")}
                                             priority={idx === 0}
                                         />
                                     ) : (

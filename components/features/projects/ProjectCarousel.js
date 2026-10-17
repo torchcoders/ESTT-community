@@ -57,7 +57,7 @@ export default function ProjectCarousel({ projects }) {
                                         fill
                                         sizes="100vw"
                                         unoptimized
-                                        className={cn("h-full w-full object-cover transition-transform duration-[3000ms] ease-out", isActive ? "scale-100" : "scale-105")}
+                                        className={cn("h-full w-full object-cover transition-transform duration-3000 ease-out", isActive ? "scale-100" : "scale-105")}
                                     />
                                 ) : (
                                     <div className="h-full w-full bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
