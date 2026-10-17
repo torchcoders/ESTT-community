@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { logModeratorAction } from '@/lib/moderator-logs';
 import { useDialog } from '@/context/DialogContext';
@@ -16,7 +17,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Search, CheckCircle2, Eye, Trash2, Edit2, Loader2, Link2, Star, MessageCircle, Mail, ExternalLink, ArrowUpDown, BookOpen, Layers } from 'lucide-react';
+import { Search, CheckCircle2, Eye, Trash2, Edit2, Loader2, Link2, Star, MessageCircle, Mail, ExternalLink, ArrowUpDown, BookOpen, Layers, Image as ImageIcon } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -94,6 +95,13 @@ export default function AdminResources({ resources }) {
     const [ratingModalOpen, setRatingModalOpen] = useState(false);
     const [itemToRate, setItemToRate] = useState(null);
     const [currentRatings, setCurrentRatings] = useState([]);
+
+    // Preview Modal State
+    const [previewModalOpen, setPreviewModalOpen] = useState(false);
+    const [previewResource, setPreviewResource] = useState(null);
+    const [previewTab, setPreviewTab] = useState('auto');
+    const [previewUploading, setPreviewUploading] = useState(false);
+    const [previewError, setPreviewError] = useState('');
 
     useEffect(() => {
         if (!db) return;
@@ -559,6 +567,141 @@ export default function AdminResources({ resources }) {
         setContactModalOpen(true);
     };
 
+    const openPreviewModal = (resource) => {
+        setPreviewResource(resource);
+        setPreviewTab('auto');
+        setPreviewError('');
+        setPreviewModalOpen(true);
+    };
+
+    const [generatedPreview, setGeneratedPreview] = useState(null);
+
+    const handleGeneratePreview = async () => {
+        setPreviewUploading(true);
+        setPreviewError('');
+        try {
+            if (!previewResource) throw new Error('Ressource non sélectionnée');
+            const fileUrl = previewResource.url || previewResource.link || previewResource.file;
+            if (!fileUrl) throw new Error('Aucun fichier source');
+            const res = await fetch('/api/generate-preview-local', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fileUrl }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Échec de la génération');
+            setGeneratedPreview(data.previewDataUrl);
+            setPreviewError('');
+        } catch (err) {
+            setPreviewError(err.message);
+        } finally {
+            setPreviewUploading(false);
+        }
+    };
+
+    const handleConfirmPreview = async () => {
+        if (!generatedPreview || !previewResource) return;
+        setPreviewUploading(true);
+        setPreviewError('');
+        try {
+            // Convert base64 to blob and upload to ImgBB
+            const base64Data = generatedPreview.split(',')[1];
+            const byteCharacters = atob(base64Data);
+            const byteArrays = [];
+            for (let i = 0; i < byteCharacters.length; i += 512) {
+                const slice = byteCharacters.slice(i, i + 512);
+                const byteNumbers = new Array(slice.length);
+                for (let j = 0; j < slice.length; j++) {
+                    byteNumbers[j] = slice.charCodeAt(j);
+                }
+                byteArrays.push(new Uint8Array(byteNumbers));
+            }
+            const blob = new Blob(byteArrays, { type: 'image/png' });
+            
+            // Upload to ImgBB
+            const formData = new FormData();
+            formData.append('image', blob);
+            
+            const uploadRes = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_API_KEY}`, {
+                method: 'POST',
+                body: formData,
+            });
+            const uploadData = await uploadRes.json();
+            if (!uploadData.success) throw new Error(uploadData.error?.message || 'ImgBB upload failed');
+            
+            // Save to RTDB
+            const apiRes = await fetch('/api/admin/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'upload',
+                    resourceId: previewResource.id,
+                    previewImageUrl: uploadData.data.url,
+                }),
+            });
+            const apiData = await apiRes.json();
+            if (!apiRes.ok) throw new Error(apiData.error || 'Failed to save preview');
+
+            showSuccess('Aperçu enregistré !');
+            setGeneratedPreview(null);
+            setPreviewModalOpen(false);
+        } catch (err) {
+            setPreviewError(err.message);
+        } finally {
+            setPreviewUploading(false);
+        }
+    };
+
+    const handleManualPreviewUpload = async (file) => {
+        setPreviewUploading(true);
+        setPreviewError('');
+        try {
+            const formData = new FormData();
+            formData.append('image', file);
+            const res = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_API_KEY}`, {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error?.message);
+
+            const apiRes = await fetch('/api/admin/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'upload',
+                    resourceId: previewResource.id,
+                    previewImageUrl: data.data.url,
+                }),
+            });
+            const apiData = await apiRes.json();
+            if (!apiRes.ok) throw new Error(apiData.error || 'Failed to save preview');
+
+            showSuccess('Image uploadée !');
+            setPreviewModalOpen(false);
+        } catch (err) {
+            setPreviewError(err.message);
+        } finally {
+            setPreviewUploading(false);
+        }
+    };
+
+    const handleDeletePreview = async () => {
+        try {
+            const apiRes = await fetch('/api/admin/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete', resourceId: previewResource.id }),
+            });
+            const apiData = await apiRes.json();
+            if (!apiRes.ok) throw new Error(apiData.error || 'Failed to delete preview');
+            showSuccess('Aperçu supprimé');
+            setPreviewModalOpen(false);
+        } catch (err) {
+            setPreviewError(err.message);
+        }
+    };
+
     const handleSendContactEmail = async () => {
         if (!itemToContact) return;
 
@@ -898,6 +1041,15 @@ export default function AdminResources({ resources }) {
                                             title="Contacter le contributeur"
                                         >
                                             <Mail className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-8 px-2 text-purple-600 border-purple-100 hover:bg-purple-50 dark:text-purple-300 dark:border-purple-500/40 dark:hover:bg-purple-500/10"
+                                            onClick={() => openPreviewModal(res)}
+                                            title="Gérer l'aperçu"
+                                        >
+                                            <ImageIcon className="w-4 h-4" />
                                         </Button>
                                         {res.contactThreadId && (
                                             <Button size="sm" variant="outline" className="h-8 px-2" asChild title="Ouvrir la room">
@@ -1301,6 +1453,141 @@ export default function AdminResources({ resources }) {
                         <Button onClick={handleSendContactEmail} disabled={sendingContactEmail}>
                             {sendingContactEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
                             Envoyer l&apos;email
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Preview Modal */}
+            <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Image de couverture</DialogTitle>
+                        <DialogDescription>
+                            Ressource: {previewResource?.title}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {!previewResource ? (
+                        <div className="space-y-4 py-4 text-center text-muted-foreground">
+                            <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+                            <p>Chargement de la ressource...</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4 py-4">
+                            {/* Current preview */}
+                            {previewResource?.previewImageUrl && (
+                                <div className="relative aspect-video rounded-lg overflow-hidden border">
+                                    <Image
+                                        src={previewResource.previewImageUrl}
+                                        alt="Current preview"
+                                        fill
+                                        className="object-cover"
+                                    />
+                                    <div className="absolute bottom-2 right-2 text-xs bg-black/50 text-white px-2 py-1 rounded">
+                                        Source: {previewResource.previewSource}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Tabs */}
+                            <div className="flex gap-2">
+                                <button
+                                    className={`px-3 py-1 rounded text-sm ${previewTab === 'auto' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
+                                    onClick={() => setPreviewTab('auto')}
+                                >
+                                    Automatique
+                                </button>
+                                <button
+                                    className={`px-3 py-1 rounded text-sm ${previewTab === 'manual' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
+                                    onClick={() => setPreviewTab('manual')}
+                                >
+                                    Manuelle (ImgBB)
+                                </button>
+                            </div>
+
+                            {/* Auto tab */}
+                            {previewTab === 'auto' && (
+                                <div className="space-y-3">
+                                    <p className="text-sm text-muted-foreground">
+                                        Génère un aperçu depuis la première page du document.
+                                    </p>
+                                    {generatedPreview ? (
+                                        <>
+                                            <div className="relative aspect-video rounded-lg overflow-hidden border">
+                                                <Image
+                                                    src={generatedPreview}
+                                                    alt="Generated preview"
+                                                    fill
+                                                    className="object-cover"
+                                                />
+                                            </div>
+                                            <Button
+                                                onClick={handleConfirmPreview}
+                                                disabled={previewUploading}
+                                            >
+                                                {previewUploading ? 'Enregistrement...' : 'Enregistrer'}
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => setGeneratedPreview(null)}
+                                                disabled={previewUploading}
+                                            >
+                                                Annuler
+                                            </Button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Button
+                                                onClick={handleGeneratePreview}
+                                                disabled={previewUploading || !previewResource || !(previewResource.url || previewResource.link || previewResource.file)}
+                                            >
+                                                {previewUploading ? 'Génération...' : 'Générer'}
+                                            </Button>
+                                        </>
+                                    )}
+                                    {previewError && <p className="text-sm text-destructive">{previewError}</p>}
+                                </div>
+                            )}
+
+                            {/* Manual tab */}
+                            {previewTab === 'manual' && (
+                                <div className="space-y-3">
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (file) handleManualPreviewUpload(file);
+                                        }}
+                                        className="w-full"
+                                    />
+                                    {previewError && <p className="text-sm text-destructive">{previewError}</p>}
+                                </div>
+                            )}
+
+                            {/* Clear button if preview exists */}
+                            {previewResource?.previewImageUrl && (
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleDeletePreview}
+                                >
+                                    Supprimer l aperçu
+                                </Button>
+                            )}
+</div>
+                    )}
+
+                    <DialogFooter>
+                        {generatedPreview && previewTab === 'auto' && (
+                            <Button
+                                onClick={handleConfirmPreview}
+                                disabled={previewUploading}
+                            >
+                                {previewUploading ? 'Enregistrement...' : 'Enregistrer'}
+                            </Button>
+                        )}
+                        <Button variant="outline" onClick={() => { setGeneratedPreview(null); setPreviewModalOpen(false); }}>
+                            Fermer
                         </Button>
                     </DialogFooter>
                 </DialogContent>

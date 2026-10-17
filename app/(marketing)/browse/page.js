@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { db as staticDb } from '@/lib/data';
 import { db, ref, get, set as firebaseSet, remove as firebaseRemove, onValue } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
@@ -299,57 +300,69 @@ export default function BrowsePage() {
         const rawUrl = resource.url || resource.link || resource.file;
         const validUrl = rawUrl ? ensureProtocol(rawUrl) : null;
         const isFav = favorites[resource.id] || false;
+        const previewUrl = resource.previewImageUrl;
 
         return (
-            <Link key={resource.id} href={`/resource/${resource.id}`} className="group flex flex-col h-full border border-border rounded-xl hover:border-primary/50 transition-all hover:shadow-md bg-card p-5 cursor-pointer">
-                <div className="flex items-start gap-3 mb-3">
-                    <div className="p-2.5 bg-muted rounded-xl text-muted-foreground shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                        {getResourceIcon(resource.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug">{resource.title}</h3>
-                        <div className="flex flex-col mt-1.5 gap-1">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                                {resource.professor && (
-                                    <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
-                                        <User className="w-3 h-3" />
-                                        {resource.professor}
-                                    </span>
-                                )}
-                                <span className="text-[10px] font-bold uppercase py-0.5 px-1.5 bg-muted text-muted-foreground rounded">{resource.type}</span>
-                                {resource.docType && (
-                                    <span className="text-[10px] font-bold uppercase py-0.5 px-1.5 bg-primary/10 text-primary rounded">{resource.docType}</span>
-                                )}
-                            </div>
-                            {renderRating(resource)}
+            <Link key={resource.id} href={`/resource/${resource.id}`} className="group flex flex-col h-full border border-border rounded-xl hover:border-primary/50 transition-all hover:shadow-md bg-card cursor-pointer overflow-hidden">
+                <div className="relative aspect-video w-full overflow-hidden rounded-t-xl bg-muted flex items-center justify-center">
+                    {previewUrl ? (
+                        <Image
+                            src={previewUrl}
+                            alt={resource.title}
+                            fill
+                            className="object-cover transition-opacity duration-300 group-hover:opacity-90"
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        />
+                    ) : (
+                        <div className="p-4 text-muted-foreground/50">
+                            {getResourceIcon(resource.type)}
                         </div>
-                    </div>
+                    )}
                 </div>
 
-                <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                    <button
-                        onClick={(e) => handleToggleFavorite(e, resource)}
-                        disabled={togglingFav === resource.id}
-                        className={`text-xs font-bold flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors ${
-                            isFav
-                                ? 'bg-primary/10 text-primary'
-                                : 'bg-muted text-muted-foreground hover:bg-primary/5 hover:text-primary'
-                        }`}
-                    >
-                        {togglingFav === resource.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
+                <div className="p-5 flex flex-col flex-1">
+                    <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug mb-3">{resource.title}</h3>
+                    <div className="flex flex-col gap-2 mb-4">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            {resource.professor && (
+                                <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+                                    <User className="w-3 h-3" />
+                                    {resource.professor}
+                                </span>
+                            )}
+                            <span className="text-[10px] font-bold uppercase py-0.5 px-1.5 bg-muted text-muted-foreground rounded">{resource.type}</span>
+                            {resource.docType && (
+                                <span className="text-[10px] font-bold uppercase py-0.5 px-1.5 bg-primary/10 text-primary rounded">{resource.docType}</span>
+                            )}
+                        </div>
+                        {renderRating(resource)}
+                    </div>
+
+                    <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
+                        <button
+                            onClick={(e) => handleToggleFavorite(e, resource)}
+                            disabled={togglingFav === resource.id}
+                            className={`text-xs font-bold flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors ${
+                                isFav
+                                    ? 'bg-primary/10 text-primary'
+                                    : 'bg-muted text-muted-foreground hover:bg-primary/5 hover:text-primary'
+                            }`}
+                        >
+                            {togglingFav === resource.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                                <ListPlus className="w-3 h-3" />
+                            )}
+                            {isFav ? 'Dans ma liste' : 'Ajouter à ma liste'}
+                        </button>
+                        {validUrl ? (
+                            <span className="text-xs font-bold text-primary group-hover:underline flex items-center gap-1 bg-primary/5 px-2.5 py-1 rounded-full">
+                                Ouvrir <ArrowRight className="w-3 h-3" />
+                            </span>
                         ) : (
-                            <ListPlus className="w-3 h-3" />
+                            <span className="text-xs text-muted-foreground">Non disponible</span>
                         )}
-                        {isFav ? 'Dans ma liste' : 'Ajouter à ma liste'}
-                    </button>
-                    {validUrl ? (
-                        <span className="text-xs font-bold text-primary group-hover:underline flex items-center gap-1 bg-primary/5 px-2.5 py-1 rounded-full">
-                            Ouvrir <ArrowRight className="w-3 h-3" />
-                        </span>
-                    ) : (
-                        <span className="text-xs text-muted-foreground">Non disponible</span>
-                    )}
+                    </div>
                 </div>
             </Link>
         );

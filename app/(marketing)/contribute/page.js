@@ -59,6 +59,13 @@ export default function ContributePage() {
     const dropRef = useRef(null);
     const [professors, setProfessors] = useState([]);
 
+    // Preview Image State
+    const [addPreview, setAddPreview] = useState(false);
+    const [previewMode, setPreviewMode] = useState('auto');
+    const [previewImage, setPreviewImage] = useState(null);
+    const [previewGenerating, setPreviewGenerating] = useState(false);
+    const [previewError, setPreviewError] = useState('');
+
     // "Autre" professor popup state
     const [isProfAutreOpen, setIsProfAutreOpen] = useState(false);
     const [customProfName, setCustomProfName] = useState('');
@@ -255,6 +262,39 @@ export default function ContributePage() {
                 setUploadProgress(100);
             }
 
+            // Handle preview image generation
+            let previewImageUrl = null;
+            let previewSource = null;
+
+            if (addPreview && resourceUrl) {
+                if (previewMode === 'manual') {
+                    if (!previewImage) {
+                        throw new Error('Veuillez uploader une image de couverture ou désactiver l\'option.');
+                    }
+                    previewImageUrl = previewImage;
+                    previewSource = 'imgbb';
+                } else if (previewMode === 'auto') {
+                    setLoading(true);
+                    setMessage('Génération de l\'aperçu...');
+try {
+                                                                    await fetch('/api/generate-preview', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ fileUrl: resourceUrl, resourceId: null }),
+                        });
+                        if (!res.ok) {
+                            const err = await res.json();
+                            throw new Error(err.error || 'Échec de la génération de l\'aperçu');
+                        }
+                        const data = await res.json();
+                        previewImageUrl = data.previewImageUrl;
+                        previewSource = 'apyhub';
+                    } catch (err) {
+                        throw new Error(`Erreur lors de la génération de l'aperçu: ${err.message}`);
+                    }
+                }
+            }
+
             const timestamp = Date.now();
 
             const moduleId = formData.module;
@@ -274,7 +314,11 @@ export default function ContributePage() {
                 authorName: formData.anonymous ? 'Anonyme' : (profile?.firstName ? `${profile.firstName} ${profile.lastName}` : 'Étudiant'),
                 createdAt: timestamp,
                 unverified: true,
-                storageType: formData.type === 'html' ? 'supabase' : 'google-drive'
+                storageType: formData.type === 'html' ? 'supabase' : 'google-drive',
+                previewImageUrl: previewImageUrl,
+                previewSource: previewSource,
+                previewGeneratedAt: previewImageUrl ? timestamp : null,
+                previewStatus: previewImageUrl ? 'ready' : null,
             };
 
             const resourcesRef = ref(db, 'resources');
@@ -498,6 +542,10 @@ export default function ContributePage() {
             </main>
         );
     }
+
+    const _previewReady = !addPreview || (previewMode === 'auto') || (previewMode === 'manual' && previewImage);
+    const previewDisabled = addPreview && previewMode === 'manual' && !previewImage;
+    const isSubmitDisabled = loading || previewDisabled;
 
     return (
         <main className="container py-12 max-w-4xl">
@@ -804,7 +852,7 @@ export default function ContributePage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="docType">Type de document *</Label>
+<Label htmlFor="docType">Type de document *</Label>
                                     <Select
                                         value={formData.docType}
                                         onValueChange={(v) => handleChange('docType', v)}
@@ -847,7 +895,7 @@ export default function ContributePage() {
                                                 : file
                                                     ? 'border-green-400 bg-green-50/50'
                                                     : 'border-muted-foreground/20 hover:bg-muted/50 hover:border-primary/40'
-                                                }`}
+                                            }`}
                                         >
                                             <div className="space-y-2 text-center pointer-events-none">
                                                 {isDragging ? (
@@ -888,6 +936,121 @@ export default function ContributePage() {
                                 )}
                             </div>
 
+                            {/* Preview Image Option */}
+                            <div className="space-y-4 p-4 bg-muted/30 rounded-lg border border-muted-foreground/10">
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id="addPreview"
+                                        checked={addPreview}
+                                        onCheckedChange={(checked) => {
+                                            setAddPreview(checked);
+                                            if (!checked) {
+                                                setPreviewImage(null);
+                                                setPreviewError('');
+                                            }
+                                        }}
+                                    />
+                                    <Label htmlFor="addPreview" className="font-medium cursor-pointer">
+                                        Ajouter une image de couverture (page de garde)
+                                    </Label>
+                                </div>
+
+                                {addPreview && (
+                                    <div className="space-y-3 pl-6 border-l-2 border-primary/20">
+                                        <div className="flex gap-3">
+                                            <Label>
+                                                <input
+                                                    type="radio"
+                                                    name="previewMode"
+                                                    value="auto"
+                                                    checked={previewMode === 'auto'}
+                                                    onChange={() => setPreviewMode('auto')}
+                                                    className="mr-2"
+                                                />
+                                                Automatique (générer depuis le document)
+                                            </Label>
+                                            <Label>
+                                                <input
+                                                    type="radio"
+                                                    name="previewMode"
+                                                    value="manual"
+                                                    checked={previewMode === 'manual'}
+                                                    onChange={() => setPreviewMode('manual')}
+                                                    className="mr-2"
+                                                />
+                                                Manuelle (uploader une image)
+                                            </Label>
+                                        </div>
+
+                                        {previewMode === 'manual' && (
+                                            <div className="space-y-2">
+                                                <Label htmlFor="previewUpload">Image de couverture</Label>
+                                                <input
+                                                    id="previewUpload"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files[0];
+                                                        if (!file) return;
+                                                        try {
+                                                            setPreviewError('');
+                                                            const { uploadToImgBB } = await import('@/lib/uploadUtils');
+                                                            const url = await uploadToImgBB(file);
+                                                            setPreviewImage(url);
+                                                        } catch (err) {
+                                                            setPreviewError(err.message);
+                                                        }
+                                                    }}
+                                                    className="w-full"
+                                                />
+                                                {previewImage && (
+                                                    <div className="relative w-48 h-27 rounded overflow-hidden border">
+                                                        <Image src={previewImage} alt="Preview" fill className="object-cover" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {previewMode === 'auto' && (
+                                            <div className="space-y-2 text-sm text-muted-foreground">
+                                                <p>L&apos;aperçu sera généré automatiquement à partir de la première page du document après l&apos;envoi.</p>
+                                                {file && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={async () => {
+                                                            if (!file) return;
+                                                            setPreviewGenerating(true);
+                                                            setPreviewError('');
+try {
+                                                                    await fetch('/api/generate-preview', {
+                                                                    method: 'POST',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    body: JSON.stringify({ fileUrl: resourceUrl }),
+                                                                });
+                                                                // Note: resourceUrl not available yet, generation happens in handleSubmit
+                                                            } catch (err) {
+                                                                setPreviewError(err.message);
+                                                            } finally {
+                                                                setPreviewGenerating(false);
+                                                            }
+                                                        }}
+                                                        disabled={previewGenerating || !file}
+                                                    >
+                                                        {previewGenerating ? 'Génération...' : 'Générer l\'aperçu'}
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {previewError && (
+                                            <p className="text-sm text-destructive">{previewError}</p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="flex items-center space-x-2 bg-muted/30 p-4 rounded-lg">
                                 <Checkbox
                                     id="anonymous"
@@ -905,7 +1068,7 @@ export default function ContributePage() {
                             </div>
 
                             <div className="flex flex-col gap-4">
-                                <Button type="submit" size="lg" className="w-full h-12 text-lg shadow-sm" disabled={loading}>
+                                <Button type="submit" size="lg" className="w-full h-12 text-lg shadow-sm" disabled={isSubmitDisabled}>
                                     {loading ? (
                                         <>
                                             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -919,6 +1082,11 @@ export default function ContributePage() {
                                         'Soumettre la ressource'
                                     )}
                                 </Button>
+                                {previewDisabled && (
+                                    <p className="text-center text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded">
+                                        Veuillez uploader une image de couverture ou désactiver l&apos;option.
+                                    </p>
+                                )}
                                 <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                                     <Info className="h-3 w-3" />
                                     <span>Toutes les ressources sont vérifiées avant d&apos;être publiées.</span>
