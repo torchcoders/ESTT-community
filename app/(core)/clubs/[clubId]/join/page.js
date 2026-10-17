@@ -67,7 +67,17 @@ export default function ClubJoinPage() {
                 return;
             }
 
+            if (clubData.username && clubId !== clubData.username) {
+                router.replace(`${getClubPath(clubData)}/join`);
+                return;
+            }
+
             setClub(clubData);
+
+            if (clubData.username && clubId !== clubData.username) {
+                router.replace(`${getClubPath(clubData)}/join`);
+                return;
+            }
 
             // Fetch custom questions
             const questionsRef = ref(db, `clubs/${clubData.id}/joinFormQuestions`);

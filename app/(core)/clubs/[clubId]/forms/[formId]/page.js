@@ -63,7 +63,13 @@ export default function CustomFormPage() {
         try {
             // Fetch Club
             const clubData = await getClubBySlug(clubId);
-            if (clubData) setClub(clubData);
+            if (clubData) {
+                if (clubData.username && clubId !== clubData.username) {
+                    router.replace(`${getClubPath(clubData)}/forms/${formId}`);
+                    return;
+                }
+                setClub(clubData);
+            }
             if (!clubData) {
                 setError('Club introuvable');
                 setLoading(false);

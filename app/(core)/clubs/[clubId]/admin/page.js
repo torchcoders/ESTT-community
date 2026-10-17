@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { db, ref, get, push, set, update, remove, onValue } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { useDialog } from '@/context/DialogContext';
-import { isClubAdmin, uploadClubImage, getClubBySlug } from '@/lib/clubUtils';
+import { isClubAdmin, uploadClubImage, getClubBySlug, getClubPath } from '@/lib/clubUtils';
 import { db as staticDb } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,7 @@ export default function ClubAdminPage() {
 
     const [club, setClub] = useState(null);
     const databaseClubId = club?.id || clubId;
+    const clubPath = club ? getClubPath(club) : `/clubs/${encodeURIComponent(clubId)}`;
     const [loading, setLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
     const [message, setMessage] = useState('');
@@ -188,7 +189,7 @@ export default function ClubAdminPage() {
 
             if (!adminStatus) {
                 setTimeout(() => {
-                    router.push(`/clubs/${clubId}`);
+                    router.push(getClubPath(club));
                 }, 2000);
             }
         }
@@ -245,7 +246,10 @@ export default function ClubAdminPage() {
 
             const clubsSnap = await get(ref(db, 'clubs'));
             const duplicate = clubsSnap.exists() && Object.entries(clubsSnap.val()).some(([id, data]) =>
-                id !== club.id && data?.username?.toLowerCase() === normalizedUsername
+                id !== club.id && (
+                    id.toLowerCase() === normalizedUsername ||
+                    data?.username?.toLowerCase() === normalizedUsername
+                )
             );
             if (duplicate) {
                 throw new Error('Ce nom utilisateur est déjà utilisé par un autre club.');
@@ -501,7 +505,7 @@ export default function ClubAdminPage() {
             try {
                 const { membershipAcceptedEmail } = await import('@/lib/email-templates');
                 const memberId = request.userId || updatedMembers[updatedMembers.length - 1].id;
-                const certificateLink = `${window.location.origin}/clubs/${clubId}/certificate/${memberId}`;
+                const certificateLink = `${window.location.origin}${clubPath}/certificate/${memberId}`;
                 const html = membershipAcceptedEmail(request.name, club.name, certificateLink);
 
                 await fetch('/api/send-email', {
@@ -1271,7 +1275,7 @@ export default function ClubAdminPage() {
                             Vous n&apos;êtes pas autorisé à gérer ce club. Seuls les membres de l&apos;organigramme peuvent accéder à cette page.
                         </p>
                         <Button asChild>
-                            <Link href={`/clubs/${clubId}`}>Retour au club</Link>
+                            <Link href={clubPath}>Retour au club</Link>
                         </Button>
                     </CardContent>
                 </Card>
@@ -1284,7 +1288,7 @@ export default function ClubAdminPage() {
             <div className="container px-2 sm:px-4 md:px-6 max-w-6xl">
                 <div className="mb-6 flex items-center justify-between">
                     <Button variant="ghost" size="sm" asChild className="gap-2">
-                        <Link href={`/clubs/${clubId}`}>
+                        <Link href={clubPath}>
                             <ArrowLeft className="w-4 h-4" />
                             Retour au club
                         </Link>
@@ -1335,7 +1339,7 @@ export default function ClubAdminPage() {
                                         {tickets.filter(t => t.status === 'pending').length > 0 && <Badge className="ml-auto bg-orange-500 text-white h-5 w-5 p-0 flex items-center justify-center rounded-full text-[10px]">{tickets.filter(t => t.status === 'pending').length}</Badge>}
                                     </TabsTrigger>
                                     <Link
-                                        href={`/clubs/${clubId}/admin/scanner`}
+                                        href={`${clubPath}/admin/scanner`}
                                         className="flex items-center gap-3 h-11 px-4 text-sm font-medium rounded-md hover:bg-muted transition-colors text-primary"
                                     >
                                         <Scan className="w-4 h-4" /> Ouvrir le Scanneur
@@ -1760,7 +1764,7 @@ export default function ClubAdminPage() {
                                                             </div>
                                                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 w-full lg:w-auto">
                                                                 <Button variant="outline" size="sm" asChild className="w-full">
-                                                                    <Link href={`/clubs/${clubId}/events/${event.id}/registration`} target="_blank">
+                                                                    <Link href={`${clubPath}/events/${event.id}/registration`} target="_blank">
                                                                         <Share2 className="w-4 h-4 mr-2" /> Lien
                                                                     </Link>
                                                                 </Button>
@@ -2424,14 +2428,14 @@ export default function ClubAdminPage() {
                                             <div className="flex flex-col items-stretch gap-2 w-full sm:flex-row sm:items-center sm:w-auto">
                                                 <Input
                                                     readOnly
-                                                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/clubs/${clubId}/join`}
+                                                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}${clubPath}/join`}
                                                     className="bg-card min-w-0 flex-1"
                                                 />
                                                 <Button
                                                     variant="outline"
                                                     className="w-full sm:w-auto"
                                                     onClick={() => {
-                                                        navigator.clipboard.writeText(`${window.location.origin}/clubs/${clubId}/join`);
+                                                        navigator.clipboard.writeText(`${window.location.origin}${clubPath}/join`);
                                                         setMessage('Lien copié !');
                                                     }}
                                                 >
@@ -2822,7 +2826,7 @@ export default function ClubAdminPage() {
                                                                         <div className="flex gap-2 mt-2">
                                                                             <button
                                                                                 onClick={() => {
-                                                                                    navigator.clipboard.writeText(`${window.location.origin}/clubs/${clubId}/forms/${form.id}`);
+                                                                                    navigator.clipboard.writeText(`${window.location.origin}${clubPath}/forms/${form.id}`);
                                                                                     setMessage('Lien copié !');
                                                                                 }}
                                                                                 className="text-xs text-blue-600 hover:underline flex items-center gap-1"
@@ -2830,7 +2834,7 @@ export default function ClubAdminPage() {
                                                                                 Copier le lien
                                                                             </button>
                                                                             <span className="text-muted-foreground">|</span>
-                                                                            <Link href={`/clubs/${clubId}/forms/${form.id}`} target="_blank" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                                                                            <Link href={`${clubPath}/forms/${form.id}`} target="_blank" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
                                                                                 Voir le formulaire
                                                                             </Link>
                                                                         </div>

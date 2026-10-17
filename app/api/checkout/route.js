@@ -20,13 +20,13 @@ export async function POST(req) {
             customData = { adId };
         } else {
             // Default to Ticket
-            const { ticketId, clubId, eventId, eventName } = body;
+            const { ticketId, clubId, clubSlug, eventId, eventName } = body;
             if (!ticketId || !price || !eventName) {
                 return NextResponse.json({ error: 'Missing ticket details' }, { status: 400 });
             }
             productName = `Billet: ${eventName}`;
             successUrl = `${req.nextUrl.origin}/tickets/${ticketId}?order_id=[order_id]&success=true`;
-            cancelUrl = `${req.nextUrl.origin}/clubs/${clubId}/events/${eventId}/registration?canceled=true`;
+            cancelUrl = `${req.nextUrl.origin}/clubs/${clubSlug || clubId}/events/${eventId}/registration?canceled=true`;
             customData = { ticketId, clubId, eventId };
         }
 

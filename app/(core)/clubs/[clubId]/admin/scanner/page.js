@@ -68,6 +68,11 @@ export default function TicketScannerPage() {
                 return;
             }
 
+            if (clubData.username && clubId !== clubData.username) {
+                router.replace(`${getClubPath(clubData)}/admin/scanner`);
+                return;
+            }
+
             setClub(clubData);
 
             if (!user) {
@@ -114,7 +119,7 @@ export default function TicketScannerPage() {
 
             const ticketData = ticketSnap.val();
 
-            if (ticketData.clubId !== clubId) {
+            if (ticketData.clubId !== (club?.id || clubId)) {
                 throw new Error("Ce ticket n'appartient pas à ce club.");
             }
 

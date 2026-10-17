@@ -68,11 +68,11 @@ export default function ClubProfilePage() {
     }, [club, user]);
 
     useEffect(() => {
-        if (user && clubId) {
+        if (user && club?.id) {
             fetchUserTickets();
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, clubId]);
+    }, [user, club?.id]);
 
     // Carousel Autoplay
     useEffect(() => {
@@ -98,6 +98,13 @@ export default function ClubProfilePage() {
                 router.push('/clubs');
                 return;
             }
+
+            // Canonicalize legacy ID URLs to the club username
+            if (clubData.username && clubId !== clubData.username) {
+                router.replace(getClubPath(clubData));
+                return;
+            }
+
             setClub(clubData);
 
             // Fetch club posts
@@ -141,7 +148,7 @@ export default function ClubProfilePage() {
                 const data = snap.val();
                 const tickets = Object.entries(data)
                     .map(([id, t]) => ({ id, ...t }))
-                    .filter(t => t.clubId === clubData.id)
+                    .filter(t => t.clubId === club.id)
                     .sort((a, b) => b.createdAt - a.createdAt);
                 setUserTickets(tickets);
             }
@@ -191,7 +198,7 @@ export default function ClubProfilePage() {
         "@type": "Organization",
         "name": club.name,
         "description": club.description,
-        "url": `https://estt.ma/clubs/${clubId}`,
+        "url": `https://estt.ma${getClubPath(club)}`,
         "logo": club.logo,
         "parentOrganization": {
             "@type": "EducationalOrganization",

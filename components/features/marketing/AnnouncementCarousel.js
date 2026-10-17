@@ -84,7 +84,7 @@ export default function AnnouncementCarousel({
                                                 {ann.title}
                                             </h3>
                                         ) : (
-                                            <Link href={`/clubs/${ann.clubId}/posts/${ann.id}`} className="block group/link">
+                                            <Link href={`/clubs/${ann.clubUsername || ann.clubId}/posts/${ann.id}`} className="block group/link">
                                                 <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white group-hover/link:text-primary-200 transition-colors line-clamp-2 leading-tight drop-shadow-md">
                                                     {ann.title}
                                                 </h3>
@@ -107,7 +107,7 @@ export default function AnnouncementCarousel({
                                             ) : (
                                                 !ann.isAdmin && (
                                                     <Button asChild size="sm" className="h-9 sm:h-10 rounded-full font-semibold px-5 sm:px-6 bg-primary hover:bg-primary/90 text-white shadow-lg border-0">
-                                                        <Link href={`/clubs/${ann.clubId}/posts/${ann.id}`}>
+                                                        <Link href={`/clubs/${ann.clubUsername || ann.clubId}/posts/${ann.id}`}>
                                                             <span className="sm:hidden">Accéder</span>
                                                             <span className="hidden sm:inline">Lire la suite</span>
                                                         </Link>

@@ -11,6 +11,7 @@ const nextConfig = {
     serverComponentsExternalPackages: ['pdf-parse', 'mammoth', 'turndown'],
   },
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',

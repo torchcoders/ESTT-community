@@ -120,7 +120,7 @@ export default function TicketPage() {
             <div className="w-full max-w-md space-y-6 relative z-10">
                 <div className="flex items-center justify-between">
                     <Button variant="ghost" asChild className="text-white/60 hover:text-white hover:bg-white/5">
-                        <Link href={`/clubs/${ticket.clubId}`}>
+                        <Link href={club ? (club.username ? `/clubs/${club.username}` : `/clubs/${ticket.clubId}`) : `/clubs/${ticket.clubId}`}>
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Club
                         </Link>

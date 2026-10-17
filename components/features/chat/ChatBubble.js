@@ -520,7 +520,7 @@ export default function ChatBubble({ message, isOwn, onReact, onDelete, onReply,
                                         </div>
                                     ) : (
                                         <Link
-                                            href={`/clubs/${sharedEvent.clubId}/events/${sharedEvent.id}/registration`}
+                                            href={clubInfo ? `${getClubPath(clubInfo)}/events/${sharedEvent.id}/registration` : `/clubs/${sharedEvent.clubId}/events/${sharedEvent.id}/registration`}
                                             className="block w-full max-w-[280px] md:max-w-none group/event bg-card border border-border/60 rounded-2xl overflow-hidden hover:border-blue-400/30 transition-all shadow-md active:scale-[0.98]"
                                         >
                                             {eventDetails.imageUrl && (

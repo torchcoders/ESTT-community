@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { db, ref, get } from '@/lib/firebase';
+import { getClubPath } from '@/lib/clubUtils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -124,7 +125,7 @@ function EventCard({ event }) {
     const isPast = date < new Date();
     return (
         <Link
-            href={`/clubs/${event.clubId}/events/${event.id}/registration`}
+            href={getClubPath({ username: event.clubUsername, id: event.clubId }) + `/events/${event.id}/registration`}
             className={cn(
                 'group flex gap-3 p-3 sm:p-4 rounded-xl border transition-all hover:shadow-md hover:border-primary/40 bg-card',
                 isPast ? 'opacity-60' : ''
@@ -335,7 +336,7 @@ function WeekView({ events, currentDate, onSelectDay: _onSelectDay, selectedDay:
                                     {dayEvents.map((event, eIdx) => (
                                         <Link
                                             key={eIdx}
-                                            href={`/clubs/${event.clubId}/posts/${event.id}`}
+                                            href={getClubPath({ username: event.clubUsername, id: event.clubId }) + `/posts/${event.id}`}
                                             className="block"
                                         >
                                             <div
@@ -430,6 +431,7 @@ export default function EventsCalendarPage() {
                             clubName: club.name,
                             clubLogo: club.logo || null,
                             clubThemeColor: club.themeColor || '#64748b',
+                            clubUsername: club.username,
                         }))
                         // Only show published events
                         .filter(e => !e.status || e.status === 'published');

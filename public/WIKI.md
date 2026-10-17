@@ -1072,6 +1072,9 @@ Firebase Realtime Database supports these index types:
   },
   "projectSubmissions": {
     ".indexOn": ["projectId", "authorId", "status"]
+  },
+  "clubs": {
+    ".indexOn": ["username"]
   }
 }
 ```

@@ -33,6 +33,13 @@ export default function PostDetailPage() {
         try {
             const clubData = await getClubBySlug(clubId);
             if (!clubData) { router.push('/clubs'); return; }
+
+            // Canonicalize legacy ID URLs to the club username
+            if (clubData.username && clubId !== clubData.username) {
+                router.replace(`${getClubPath(clubData)}/posts/${postId}`);
+                return;
+            }
+
             setClub(clubData);
 
             const postSnap = await get(ref(db, `clubPosts/${clubData.id}/${postId}`));
@@ -203,7 +210,7 @@ export default function PostDetailPage() {
                                 <Image src={club.logo} alt={club.name} fill className="object-cover" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center font-bold text-white text-sm" style={{ backgroundColor: club.themeColor || '#64748b' }}>
-                                    {club.name[0]}
+                                    {(club.name || '?')[0]}
                                 </div>
                             )}
                         </div>

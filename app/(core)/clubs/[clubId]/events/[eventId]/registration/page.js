@@ -38,9 +38,15 @@ export default function EventRegistrationPage() {
                 // Fetch Club
                 const clubData = await getClubBySlug(clubId);
                 if (!clubData) {
-                    setError("Club introuvable");
+                    router.push('/clubs');
                     return;
                 }
+
+                if (clubData.username && clubId !== clubData.username) {
+                    router.replace(`${getClubPath(clubData)}/events/${eventId}/registration`);
+                    return;
+                }
+
                 setClub(clubData);
 
                 // Fetch Event

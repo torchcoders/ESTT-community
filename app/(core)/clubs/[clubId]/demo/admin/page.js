@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { db, ref, get, onValue } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { useDialog } from '@/context/DialogContext';
-import { isClubAdmin, } from '@/lib/clubUtils';
+import { isClubAdmin, getClubBySlug, getClubPath } from '@/lib/clubUtils';
 import { db as staticDb } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

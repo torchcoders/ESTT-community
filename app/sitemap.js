@@ -41,7 +41,7 @@ export default async function sitemap() {
             return Object.entries(snapshot.val())
                 .filter(([_key, item]) => item.verified || item.unverified !== true) // Show verified or not marked as unverified
                 .map(([id, item]) => ({
-                    url: `${baseUrl}/${routePrefix}/${id}`,
+                    url: `${baseUrl}/${routePrefix}/${item.username || id}`,
                     lastModified: new Date(item.updatedAt || item.createdAt || Date.now()),
                     changeFrequency: 'monthly',
                     priority,

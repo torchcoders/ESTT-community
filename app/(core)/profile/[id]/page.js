@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import UnifiedDialog from '@/components/ui/UnifiedDialog';
 import { Loader2, User, Mail, GraduationCap, Calendar, Share2, Star, Edit2, X, ArrowRight, Award, Camera, Upload, ShieldCheck, Trophy, LogOut, Bug, Gem, MessageSquare, Settings } from 'lucide-react';
 import { cn, getUserLevel, resolveUidFromIdentifier } from '@/lib/utils';
+import { getClubPath } from '@/lib/clubUtils';
 import { uploadToImgBB } from '@/lib/uploadUtils';
 import SettingsModal from '@/components/profile/SettingsModal';
 
@@ -510,7 +511,7 @@ export default function PublicProfilePage() {
 
 
                                     {affiliatedClub && (
-                                        <Link href={`/clubs/${affiliatedClub.id}`} className="group relative flex items-center">
+                                        <Link href={getClubPath(affiliatedClub)} className="group relative flex items-center">
                                             <div className="w-[18px] h-[18px] rounded-[3px] overflow-hidden border border-border bg-card">
                                                 {affiliatedClub.logo ? (
                                                     <Image
@@ -960,22 +961,22 @@ export default function PublicProfilePage() {
                                 ) : userClubs.length > 0 ? (
                                     userClubs.map(club => (
                                         <div key={club.id} className="group relative border border-border rounded-xl hover:border-primary/50 transition-colors text-center p-4 bg-card">
-                                            <Link href={`/clubs/${club.id}`}>
+                                            <Link href={getClubPath(club)}>
                                                 <div className="relative w-10 h-10 mx-auto mb-2">
                                                     {club.logo ? (
                                                         <Image src={club.logo} alt={club.name} fill sizes={IMAGE_SIZES.CLUB_LOGO_MD} className="object-contain" />
                                                     ) : (
                                                         <div className="w-full h-full rounded-full flex items-center justify-center font-bold text-white text-sm" style={{ backgroundColor: club.themeColor || '#64748b' }}>
-                                                            {club.name[0]}
+                                                            {(club.name || '?')[0]}
                                                         </div>
                                                     )}
                                                 </div>
-                                                <p className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">{club.name}</p>
+                                                <p className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">{club.name || 'Club'}</p>
                                             </Link>
 
                                             {currentUser && currentUser.uid === resolvedUid && club.userMemberId && (
                                                 <Link
-                                                    href={`/clubs/${club.id}/certificate/${club.userMemberId}`}
+                                                    href={`${getClubPath(club)}/certificate/${club.userMemberId}`}
                                                     className="mt-2 text-[10px] font-bold text-primary flex items-center justify-center gap-1 hover:underline pt-2 border-t border-slate-50"
                                                 >
                                                     <Award className="w-3 h-3" />

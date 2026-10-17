@@ -34,6 +34,10 @@ export default function CertificatePage() {
                 setError('Club introuvable');
                 return;
             }
+            if (clubData.username && clubId !== clubData.username) {
+                router.replace(`${getClubPath(clubData)}/certificate/${memberId}`);
+                return;
+            }
             setClub(clubData);
 
             // Find Member in club members list

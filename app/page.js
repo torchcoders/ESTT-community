@@ -114,7 +114,7 @@ export default function Home() {
                             if (['announcement', 'activity'].includes(post.type)) {
                                 allAnnouncements.push({
                                     id: postId,
-                                    clubId,
+                                    clubUsername: clubInfo?.username,
                                     clubName: clubInfo?.name || 'Club',
                                     clubLogo: clubInfo?.logo,
                                     themeColor: clubInfo?.themeColor,
