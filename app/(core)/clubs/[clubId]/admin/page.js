@@ -17,12 +17,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, AlertCircle, CheckCircle2, FileText, Megaphone, Calendar, Edit, Trash2, Plus, Upload, Ticket, Users, LayoutDashboard, Settings, Menu, Share2, ClipboardList, Scan, Bell, Eye } from 'lucide-react';
+import { Loader2, ArrowLeft, AlertCircle, CheckCircle2, FileText, FileSpreadsheet, Megaphone, Calendar, Edit, Trash2, Plus, Upload, Ticket, Users, LayoutDashboard, Settings, Menu, Share2, ClipboardList, Scan, Bell, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { sendPrivateNotification, NOTIF_TYPES } from '@/lib/notifications';
 import { generatePDF, generateAllFormResponsesPDF, generateCertificate, generateAttendanceList, generatePostPDF } from '@/lib/pdfUtils';
 import { uploadToImgBB } from '@/lib/uploadUtils';
+import { downloadFormResponsesExcel } from '@/lib/exportFormResponsesToExcel';
 
 
 export default function ClubAdminPage() {
@@ -160,38 +161,37 @@ export default function ClubAdminPage() {
         }
     };
 
-    const handleGenerateAllJoinResponsesPDF = async () => {
+    const handleExportAllJoinResponsesExcel = async () => {
         if (joinRequests.length === 0) return;
 
+        const form = {
+            title: "Demandes d'adhésion",
+            dateLocale: 'fr-FR',
+            fields: [
+                { id: 'name', label: 'Nom complet' },
+                { id: 'email', label: 'Email' },
+                { id: 'phone', label: 'Téléphone' },
+                { id: 'reason', label: 'Motivation' },
+                ...joinFormQuestions.map(q => ({ id: q.id, label: q.label }))
+            ]
+        };
+        const data = joinRequests.map(req => ({
+            submittedAt: req.submittedAt,
+            data: {
+                name: req.name,
+                email: req.email,
+                phone: req.phone,
+                reason: req.reason,
+                ...(req.answers || {})
+            }
+        }));
+
         try {
-            const form = {
-                title: "Demandes d'adhésion",
-                fields: [
-                    { id: 'name', label: 'Nom complet' },
-                    { id: 'email', label: 'Email' },
-                    { id: 'phone', label: 'Téléphone' },
-                    { id: 'reason', label: 'Motivation' },
-                    ...joinFormQuestions.map(q => ({ id: q.id, label: q.label }))
-                ]
-            };
-
-            const data = joinRequests.map(req => ({
-                id: req.id,
-                submittedAt: req.submittedAt,
-                data: {
-                    name: req.name,
-                    email: req.email,
-                    phone: req.phone,
-                    reason: req.reason,
-                    ...(req.answers || {})
-                }
-            }));
-
-            await generateAllFormResponsesPDF(data, form, club);
-            setMessage('Toutes les demandes ont été exportées avec succès');
+            await downloadFormResponsesExcel(form, data);
+            setMessage('Toutes les demandes ont été exportées vers Excel avec succès.');
         } catch (error) {
-            console.error('Error exporting all join responses:', error);
-            setMessage("Erreur lors de l'exportation des demandes");
+            console.error('Excel join responses export failed:', error);
+            setMessage("Erreur lors de l'exportation du fichier Excel");
         }
     };
 
@@ -2548,11 +2548,12 @@ export default function ClubAdminPage() {
                                             </div>
                                             <Button
                                                 variant="outline"
-                                                onClick={handleGenerateAllJoinResponsesPDF}
+                                                onClick={handleExportAllJoinResponsesExcel}
                                                 disabled={joinRequests.length === 0}
+                                                className="gap-2"
                                             >
-                                                <FileText className="w-4 h-4 mr-2" />
-                                                Exporter toutes les réponses
+                                                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                                                Exporter en Excel
                                             </Button>
                                         </div>
 
