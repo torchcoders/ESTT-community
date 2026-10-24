@@ -1,3 +1,15 @@
+# [1.41.0](https://github.com/torchcoders/ESTT-community/compare/v1.40.0...v1.41.0) (2026-10-24)
+
+
+### Bug Fixes
+
+* export club join responses to Excel ([e246beb](https://github.com/torchcoders/ESTT-community/commit/e246beb7f2be12946c941aa51394c44f1ff62fc5))
+
+
+### Features
+
+* export club responses to Excel ([6fc3b56](https://github.com/torchcoders/ESTT-community/commit/6fc3b562735548667790905dee5f7baa8a860ad5))
+
 # [1.40.0](https://github.com/torchcoders/ESTT-community/compare/v1.39.0...v1.40.0) (2026-10-21)
 
 
