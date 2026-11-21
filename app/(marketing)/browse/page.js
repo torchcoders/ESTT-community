@@ -249,6 +249,22 @@ export default function BrowsePage() {
         return `https://${url}`;
     };
 
+    /**
+     * Returns true when a URL points to a PDF, regardless of resource.type.
+     * Covers:
+     *   - Google Drive share links (drive.google.com / docs.google.com)
+     *   - Any URL whose path ends with .pdf
+     */
+    const isUrlPdf = (url) => {
+        if (!url) return false;
+        if (/drive\.google\.com|docs\.google\.com/.test(url)) return true;
+        try {
+            return new URL(url).pathname.toLowerCase().endsWith('.pdf');
+        } catch {
+            return url.toLowerCase().includes('.pdf');
+        }
+    };
+
     const getResourceIcon = (type) => {
         switch (type) {
             case 'pdf': return <FileText className="w-5 h-5" />;
@@ -300,7 +316,7 @@ export default function BrowsePage() {
         const rawUrl = resource.url || resource.link || resource.file;
         const validUrl = rawUrl ? ensureProtocol(rawUrl) : null;
         const isFav = favorites[resource.id] || false;
-        const isPdf = resource.type === 'pdf' && validUrl;
+        const isPdf = (resource.type === 'pdf' || isUrlPdf(validUrl)) && !!validUrl;
 
         return (
             <Link key={resource.id} href={`/resource/${resource.id}`} className="group flex flex-col h-full border border-border rounded-xl hover:border-primary/50 transition-all hover:shadow-md bg-card cursor-pointer overflow-hidden">
