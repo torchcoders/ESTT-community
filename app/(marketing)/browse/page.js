@@ -15,6 +15,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Badge, Loader2, FileText, Video, ImageIcon, Link as LinkIcon, ArrowRight, FolderOpen, User, Star, BookOpen, ClipboardList, FlaskConical, FileCheck, Layers, Globe, ListPlus } from 'lucide-react';
+import PdfCoverImage from '@/components/features/resources/PdfCoverImage';
 
 const RESOURCE_CATEGORIES = [
     { id: 'Cours', label: 'Cours', icon: <BookOpen className="w-5 h-5 text-blue-500" /> },
@@ -299,57 +300,79 @@ export default function BrowsePage() {
         const rawUrl = resource.url || resource.link || resource.file;
         const validUrl = rawUrl ? ensureProtocol(rawUrl) : null;
         const isFav = favorites[resource.id] || false;
+        const isPdf = resource.type === 'pdf' && validUrl;
 
         return (
-            <Link key={resource.id} href={`/resource/${resource.id}`} className="group flex flex-col h-full border border-border rounded-xl hover:border-primary/50 transition-all hover:shadow-md bg-card p-5 cursor-pointer">
-                <div className="flex items-start gap-3 mb-3">
-                    <div className="p-2.5 bg-muted rounded-xl text-muted-foreground shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                        {getResourceIcon(resource.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug">{resource.title}</h3>
-                        <div className="flex flex-col mt-1.5 gap-1">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                                {resource.professor && (
-                                    <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
-                                        <User className="w-3 h-3" />
-                                        {resource.professor}
-                                    </span>
-                                )}
-                                <span className="text-[10px] font-bold uppercase py-0.5 px-1.5 bg-muted text-muted-foreground rounded">{resource.type}</span>
-                                {resource.docType && (
-                                    <span className="text-[10px] font-bold uppercase py-0.5 px-1.5 bg-primary/10 text-primary rounded">{resource.docType}</span>
-                                )}
-                            </div>
-                            {renderRating(resource)}
+            <Link key={resource.id} href={`/resource/${resource.id}`} className="group flex flex-col h-full border border-border rounded-xl hover:border-primary/50 transition-all hover:shadow-md bg-card cursor-pointer overflow-hidden">
+                {/* PDF cover preview */}
+                {isPdf && (
+                    <div className="relative">
+                        <PdfCoverImage pdfUrl={validUrl} alt={resource.title} />
+                        {/* Type badges overlay */}
+                        <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                            <span className="text-[10px] font-bold uppercase py-0.5 px-1.5 bg-background/90 backdrop-blur-sm text-foreground rounded shadow-sm">{resource.type}</span>
+                            {resource.docType && (
+                                <span className="text-[10px] font-bold uppercase py-0.5 px-1.5 bg-primary text-primary-foreground rounded shadow-sm">{resource.docType}</span>
+                            )}
                         </div>
                     </div>
-                </div>
+                )}
 
-                <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                    <button
-                        onClick={(e) => handleToggleFavorite(e, resource)}
-                        disabled={togglingFav === resource.id}
-                        className={`text-xs font-bold flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors ${
-                            isFav
-                                ? 'bg-primary/10 text-primary'
-                                : 'bg-muted text-muted-foreground hover:bg-primary/5 hover:text-primary'
-                        }`}
-                    >
-                        {togglingFav === resource.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
+                <div className="flex flex-col flex-1 p-5">
+                    <div className="flex items-start gap-3 mb-3">
+                        <div className="p-2.5 bg-muted rounded-xl text-muted-foreground shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                            {getResourceIcon(resource.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug">{resource.title}</h3>
+                            <div className="flex flex-col mt-1.5 gap-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    {resource.professor && (
+                                        <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+                                            <User className="w-3 h-3" />
+                                            {resource.professor}
+                                        </span>
+                                    )}
+                                    {/* Only show badges here for non-PDF resources */}
+                                    {!isPdf && (
+                                        <>
+                                            <span className="text-[10px] font-bold uppercase py-0.5 px-1.5 bg-muted text-muted-foreground rounded">{resource.type}</span>
+                                            {resource.docType && (
+                                                <span className="text-[10px] font-bold uppercase py-0.5 px-1.5 bg-primary/10 text-primary rounded">{resource.docType}</span>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                                {renderRating(resource)}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
+                        <button
+                            onClick={(e) => handleToggleFavorite(e, resource)}
+                            disabled={togglingFav === resource.id}
+                            className={`text-xs font-bold flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors ${
+                                isFav
+                                    ? 'bg-primary/10 text-primary'
+                                    : 'bg-muted text-muted-foreground hover:bg-primary/5 hover:text-primary'
+                            }`}
+                        >
+                            {togglingFav === resource.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                                <ListPlus className="w-3 h-3" />
+                            )}
+                            {isFav ? 'Dans ma liste' : 'Ajouter à ma liste'}
+                        </button>
+                        {validUrl ? (
+                            <span className="text-xs font-bold text-primary group-hover:underline flex items-center gap-1 bg-primary/5 px-2.5 py-1 rounded-full">
+                                Ouvrir <ArrowRight className="w-3 h-3" />
+                            </span>
                         ) : (
-                            <ListPlus className="w-3 h-3" />
+                            <span className="text-xs text-muted-foreground">Non disponible</span>
                         )}
-                        {isFav ? 'Dans ma liste' : 'Ajouter à ma liste'}
-                    </button>
-                    {validUrl ? (
-                        <span className="text-xs font-bold text-primary group-hover:underline flex items-center gap-1 bg-primary/5 px-2.5 py-1 rounded-full">
-                            Ouvrir <ArrowRight className="w-3 h-3" />
-                        </span>
-                    ) : (
-                        <span className="text-xs text-muted-foreground">Non disponible</span>
-                    )}
+                    </div>
                 </div>
             </Link>
         );
