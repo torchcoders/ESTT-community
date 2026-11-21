@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { db, ref, update } from '@/lib/firebase';
+import { db, ref, update, auth } from '@/lib/firebase';
 import { db as staticDb } from '@/lib/data';
+import { sendPrivateNotification, NOTIF_TYPES, NOTIF_PRIORITY } from '@/lib/notifications';
 import { useDialog } from '@/context/DialogContext';
 import {
     Table,
@@ -19,8 +20,12 @@ import { Input } from '@/components/ui/input';
 import {
     DropdownMenu,
     DropdownMenuContent,
+    DropdownMenuItem,
     DropdownMenuRadioGroup,
     DropdownMenuRadioItem,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
     DropdownMenuTrigger,
     DropdownMenuSeparator,
     DropdownMenuLabel,
@@ -41,6 +46,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     ExternalLink,
     Search,
@@ -52,6 +58,18 @@ import {
     Plus,
     Trash2,
     Loader2,
+    Copy,
+    MoreVertical,
+    Mail,
+    Link2,
+    BadgeCheck,
+    Bell,
+    Clock,
+    KeyRound,
+    MailCheck,
+    Ban,
+    Download,
+    MessageSquare,
 } from 'lucide-react';
 
 const ROLE_OPTIONS = [
@@ -72,6 +90,44 @@ const VERIFIED_OPTIONS = [
     { value: 'all', label: 'Tous les utilisateurs' },
     { value: 'verified', label: 'Email vérifié' },
 ];
+
+const ASSIGNABLE_ROLES = [
+    { value: 'admin', label: 'Admin' },
+    { value: 'moderator', label: 'Modérateur' },
+    { value: 'student', label: 'Étudiant' },
+];
+
+const BAN_DURATIONS = [
+    { value: '1', label: '1 jour' },
+    { value: '7', label: '7 jours' },
+    { value: '30', label: '30 jours' },
+    { value: '90', label: '90 jours' },
+    { value: 'permanent', label: 'Permanent' },
+];
+
+function formatDate(value) {
+    if (!value) return '—';
+    const timestamp = typeof value === 'number'
+        ? value
+        : value?.seconds
+            ? value.seconds * 1000
+            : new Date(value).getTime();
+    if (!timestamp || Number.isNaN(timestamp)) return '—';
+    return new Date(timestamp).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function countEntries(value) {
+    return value && typeof value === 'object' ? Object.keys(value).length : 0;
+}
+
+function InfoItem({ label, value }) {
+    return (
+        <div className="space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</p>
+            <p className="break-all text-sm">{value || '—'}</p>
+        </div>
+    );
+}
 
 const ROLE_BADGE_CLASSES = {
     admin: 'bg-yellow-400 text-white hover:bg-yellow-500 border-none',
@@ -95,7 +151,304 @@ export default function AdminUsers({ users, canEdit = false }) {
         startYear: '',
     });
     const [savingUser, setSavingUser] = useState(false);
-    const { showSuccess, showError } = useDialog();
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [bulkDeleting, setBulkDeleting] = useState(false);
+    const [banTarget, setBanTarget] = useState(null);
+    const [banForm, setBanForm] = useState({ reason: '', duration: '7' });
+    const [banSaving, setBanSaving] = useState(false);
+    const [notifyTargets, setNotifyTargets] = useState([]);
+    const [notifyForm, setNotifyForm] = useState({ title: '', message: '' });
+    const [notifySending, setNotifySending] = useState(false);
+    const [activityTarget, setActivityTarget] = useState(null);
+    const { showSuccess, showError, showWarning, showConfirm } = useDialog();
+
+    const currentUserId = auth?.currentUser?.uid;
+    const isBanned = (user) => user?.banned === true && (!user.bannedUntil || user.bannedUntil > Date.now());
+
+    const copyUserId = async (id) => {
+        try {
+            await navigator.clipboard.writeText(id);
+            showSuccess('Identifiant copié dans le presse-papier !');
+        } catch (error) {
+            console.error('Failed to copy user id:', error);
+            showError('Impossible de copier l’identifiant.');
+        }
+    };
+
+    const copyEmail = async (user) => {
+        if (!user?.email) {
+            showWarning('Cet utilisateur n’a pas d’adresse email.');
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(user.email);
+            showSuccess('Email copié dans le presse-papier !');
+        } catch (error) {
+            console.error('Failed to copy email:', error);
+            showError('Impossible de copier l’email.');
+        }
+    };
+
+    const copyProfileLink = async (user) => {
+        try {
+            await navigator.clipboard.writeText(`${window.location.origin}/profile/${user.id}`);
+            showSuccess('Lien du profil copié dans le presse-papier !');
+        } catch (error) {
+            console.error('Failed to copy profile link:', error);
+            showError('Impossible de copier le lien du profil.');
+        }
+    };
+
+    const requestAdminAction = async (payload) => {
+        if (!auth?.currentUser) {
+            throw new Error('Session administrateur introuvable.');
+        }
+        const token = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/admin/users/actions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data.error || 'L’action a échoué.');
+        }
+        return data;
+    };
+
+    const changeUserRole = async (user, role) => {
+        if (!user || (user.role || 'student') === role) return;
+        try {
+            await requestAdminAction({ uid: user.id, action: 'setRole', role });
+            showSuccess(`Le rôle de ${user.firstName || ''} ${user.lastName || ''} est maintenant « ${ASSIGNABLE_ROLES.find((r) => r.value === role)?.label || role} ».`);
+        } catch (error) {
+            console.error('Failed to change user role:', error);
+            showError(error.message || 'Impossible de modifier le rôle de cet utilisateur.');
+        }
+    };
+
+    const toggleEmailVerification = async (user) => {
+        const verified = user.verifiedEmail === true;
+        try {
+            await update(ref(db, `users/${user.id}`), {
+                verifiedEmail: !verified,
+                verifiedAt: verified ? null : Date.now(),
+            });
+            showSuccess(verified ? 'La vérification de l’email a été retirée.' : 'L’email a été marqué comme vérifié.');
+        } catch (error) {
+            console.error('Failed to toggle email verification:', error);
+            showError('Impossible de modifier la vérification de l’email.');
+        }
+    };
+
+    const sendVerificationEmail = async (user) => {
+        if (!user?.email) {
+            showWarning('Cet utilisateur n’a pas d’adresse email.');
+            return;
+        }
+        try {
+            const response = await fetch('/api/auth/verify-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'send',
+                    uid: user.id,
+                    email: user.email,
+                    firstName: user.firstName,
+                }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.error || 'L’envoi a échoué.');
+            }
+            showSuccess(`Un code de vérification a été envoyé à ${user.email}.`);
+        } catch (error) {
+            console.error('Failed to send verification email:', error);
+            showError(error.message || 'Impossible d’envoyer l’email de vérification.');
+        }
+    };
+
+    const sendPasswordReset = async (user) => {
+        if (!user?.email) {
+            showWarning('Cet utilisateur n’a pas d’adresse email.');
+            return;
+        }
+        try {
+            const { sendPasswordResetEmail } = await import('firebase/auth');
+            await sendPasswordResetEmail(auth, user.email);
+            showSuccess(`Un email de réinitialisation a été envoyé à ${user.email}.`);
+        } catch (error) {
+            console.error('Failed to send password reset email:', error);
+            showError('Impossible d’envoyer l’email de réinitialisation.');
+        }
+    };
+
+    const openBanDialog = (user) => {
+        setBanTarget(user);
+        setBanForm({ reason: '', duration: '7' });
+    };
+
+    const submitBan = async () => {
+        if (!banTarget) return;
+        setBanSaving(true);
+        try {
+            if (isBanned(banTarget)) {
+                await requestAdminAction({ uid: banTarget.id, action: 'unban' });
+                showSuccess('Le compte a été réactivé.');
+            } else {
+                const durationDays = banForm.duration === 'permanent' ? null : Number(banForm.duration);
+                await requestAdminAction({
+                    uid: banTarget.id,
+                    action: 'ban',
+                    reason: banForm.reason.trim(),
+                    durationDays,
+                });
+                showSuccess('L’utilisateur a été banni.');
+            }
+            setBanTarget(null);
+            setBanForm({ reason: '', duration: '7' });
+        } catch (error) {
+            console.error('Failed to update ban status:', error);
+            showError(error.message || 'Impossible de modifier le statut du compte.');
+        } finally {
+            setBanSaving(false);
+        }
+    };
+
+    const openNotificationDialog = (targets) => {
+        setNotifyTargets(targets);
+        setNotifyForm({ title: '', message: '' });
+    };
+
+    const submitNotification = async () => {
+        if (!notifyForm.title.trim() || !notifyForm.message.trim()) {
+            showWarning('Veuillez renseigner un titre et un message.');
+            return;
+        }
+        setNotifySending(true);
+        try {
+            await Promise.all(
+                notifyTargets.map((target) =>
+                    sendPrivateNotification(target.id, {
+                        type: NOTIF_TYPES.SYSTEM,
+                        title: notifyForm.title.trim(),
+                        message: notifyForm.message.trim(),
+                        icon: 'bell',
+                        priority: NOTIF_PRIORITY.NORMAL,
+                    })
+                )
+            );
+            showSuccess(
+                notifyTargets.length === 1
+                    ? 'Notification envoyée.'
+                    : `Notification envoyée à ${notifyTargets.length} utilisateurs.`
+            );
+            setNotifyTargets([]);
+            setNotifyForm({ title: '', message: '' });
+        } catch (error) {
+            console.error('Failed to send notification:', error);
+            showError('Impossible d’envoyer la notification.');
+        } finally {
+            setNotifySending(false);
+        }
+    };
+
+    const deleteUser = async (user) => {
+        if (!user) return;
+        if (user.id === currentUserId) {
+            showError('Vous ne pouvez pas supprimer votre propre compte depuis cette page.');
+            return;
+        }
+        const confirmed = await showConfirm(
+            `Supprimer définitivement le compte de ${user.firstName || ''} ${user.lastName || ''} (${user.email || 'sans email'}) ? Cette action est irréversible.`,
+            {
+                type: 'danger',
+                title: 'Supprimer l’utilisateur',
+                confirmLabel: 'Supprimer',
+                cancelLabel: 'Annuler',
+            }
+        );
+        if (!confirmed) return;
+
+        try {
+            await requestAdminAction({ uid: user.id, action: 'delete' });
+            showSuccess('L’utilisateur a été supprimé.');
+        } catch (error) {
+            console.error('Failed to delete user:', error);
+            showError(error.message || 'Impossible de supprimer cet utilisateur.');
+        }
+    };
+
+    const exportUsersCsv = (list) => {
+        if (!list.length) return;
+        const headers = ['ID', 'Prénom', 'Nom', 'Email', 'Filière', 'Année', 'Rôle', 'Email vérifié', 'Banni', 'Créé le'];
+        const escape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+        const rows = list.map((user) => [
+            user.id,
+            user.firstName,
+            user.lastName,
+            user.email,
+            user.filiere,
+            user.startYear,
+            user.role || 'student',
+            user.verifiedEmail ? 'Oui' : 'Non',
+            user.banned ? 'Oui' : 'Non',
+            formatDate(user.createdAt),
+        ]);
+        const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(escape).join(',')).join('\r\n')}`;
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `utilisateurs-${new Date().toISOString().slice(0, 10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        showSuccess(`${list.length} utilisateur${list.length !== 1 ? 's' : ''} exporté${list.length !== 1 ? 's' : ''}.`);
+    };
+
+    const bulkDeleteUsers = async () => {
+        const targets = users.filter((user) => selectedIds.includes(user.id) && user.id !== currentUserId);
+        if (!targets.length) {
+            showWarning('Aucun utilisateur sélectionné ne peut être supprimé.');
+            return;
+        }
+        const confirmed = await showConfirm(
+            `Supprimer définitivement ${targets.length} utilisateur${targets.length !== 1 ? 's' : ''} ? Cette action est irréversible.`,
+            {
+                type: 'danger',
+                title: 'Supprimer les utilisateurs',
+                confirmLabel: 'Supprimer',
+                cancelLabel: 'Annuler',
+            }
+        );
+        if (!confirmed) return;
+
+        setBulkDeleting(true);
+        try {
+            const results = await Promise.allSettled(
+                targets.map((target) => requestAdminAction({ uid: target.id, action: 'delete' }))
+            );
+            const failed = results.filter((result) => result.status === 'rejected').length;
+            if (failed > 0) {
+                showError(`${failed} suppression${failed !== 1 ? 's' : ''} sur ${targets.length} ont échoué.`);
+            } else {
+                showSuccess(`${targets.length} utilisateur${targets.length !== 1 ? 's' : ''} supprimé${targets.length !== 1 ? 's' : ''}.`);
+            }
+            setSelectedIds((ids) => ids.filter((id) => !targets.some((target) => target.id === id)));
+        } catch (error) {
+            console.error('Failed to bulk delete users:', error);
+            showError('Impossible de supprimer les utilisateurs sélectionnés.');
+        } finally {
+            setBulkDeleting(false);
+        }
+    };
+
+    const toggleSelect = (id) => {
+        setSelectedIds((ids) => (ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]));
+    };
 
     const openEditDialog = (user) => {
         setUserToEdit(user);
@@ -244,6 +597,18 @@ export default function AdminUsers({ users, canEdit = false }) {
     }, [users, search, sortBy, roleFilter, filiereFilter, verifiedFilter]);
 
     const activeFilterCount = (roleFilter !== 'all' ? 1 : 0) + (filiereFilter !== 'all' ? 1 : 0) + (verifiedFilter !== 'all' ? 1 : 0);
+
+    const filteredIds = filtered.map((user) => user.id);
+    const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedIds.includes(id));
+    const selectedUsers = users.filter((user) => selectedIds.includes(user.id));
+
+    const toggleSelectAll = () => {
+        if (allFilteredSelected) {
+            setSelectedIds((ids) => ids.filter((id) => !filteredIds.includes(id)));
+        } else {
+            setSelectedIds((ids) => [...new Set([...ids, ...filteredIds])]);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -395,11 +760,45 @@ export default function AdminUsers({ users, canEdit = false }) {
                 </div>
             </div>
 
+            {canEdit && selectedIds.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
+                    <span className="text-sm font-semibold">
+                        {selectedIds.length} utilisateur{selectedIds.length !== 1 ? 's' : ''} sélectionné{selectedIds.length !== 1 ? 's' : ''}
+                    </span>
+                    <div className="ml-auto flex flex-wrap items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={() => exportUsersCsv(selectedUsers)} className="gap-1.5">
+                            <Download className="w-4 h-4" />
+                            Exporter CSV
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => openNotificationDialog(selectedUsers)} className="gap-1.5">
+                            <Bell className="w-4 h-4" />
+                            Notifier
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={bulkDeleteUsers} disabled={bulkDeleting} className="gap-1.5">
+                            {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                            Supprimer
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>
+                            Effacer
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             {/* Table */}
             <Card className="border-none shadow-sm overflow-hidden">
                 <Table>
                     <TableHeader className="bg-muted">
                         <TableRow>
+                            {canEdit && (
+                                <TableHead className="w-10">
+                                    <Checkbox
+                                        checked={allFilteredSelected}
+                                        onCheckedChange={toggleSelectAll}
+                                        aria-label="Sélectionner tous les utilisateurs affichés"
+                                    />
+                                </TableHead>
+                            )}
                             <TableHead className="font-black uppercase text-[10px] tracking-widest">Nom</TableHead>
                             <TableHead className="font-black uppercase text-[10px] tracking-widest">Email</TableHead>
                             <TableHead className="font-black uppercase text-[10px] tracking-widest">Filière</TableHead>
@@ -410,43 +809,157 @@ export default function AdminUsers({ users, canEdit = false }) {
                     <TableBody>
                         {filtered.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">
+                                <TableCell colSpan={canEdit ? 6 : 5} className="text-center py-12 text-muted-foreground text-sm">
                                     Aucun utilisateur ne correspond à votre recherche.
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filtered.map((u) => (
-                                <TableRow key={u.id} className="hover:bg-muted/50 transition-colors">
-                                    <TableCell className="font-bold text-sm">{u.firstName} {u.lastName}</TableCell>
-                                    <TableCell className="text-xs text-muted-foreground">{u.email}</TableCell>
-                                    <TableCell className="text-xs font-bold uppercase">{u.filiere}</TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            variant="outline"
-                                            className={`text-[8px] font-black uppercase tracking-tighter ${ROLE_BADGE_CLASSES[(u.role || '').toLowerCase()] || 'bg-muted text-foreground border-border'}`}
-                                        >
-                                            {u.role || 'Étudiant'}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
+                            filtered.map((u) => {
+                                const isSelf = u.id === currentUserId;
+                                return (
+                                    <TableRow key={u.id} className="hover:bg-muted/50 transition-colors">
                                         {canEdit && (
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => openEditDialog(u)}
-                                                aria-label={`Modifier ${u.firstName || ''} ${u.lastName || ''}`}
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                            </Button>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={selectedIds.includes(u.id)}
+                                                    onCheckedChange={() => toggleSelect(u.id)}
+                                                    aria-label={`Sélectionner ${u.firstName || ''} ${u.lastName || ''}`}
+                                                />
+                                            </TableCell>
                                         )}
-                                        <Button size="sm" variant="ghost" asChild>
-                                            <a href={`/profile/${u.id}`} target="_blank">
-                                                <ExternalLink className="w-4 h-4" />
-                                            </a>
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                                        <TableCell>
+                                            <div className="font-bold text-sm">{u.firstName} {u.lastName}</div>
+                                            {isBanned(u) && (
+                                                <Badge
+                                                    variant="outline"
+                                                    className="mt-1 text-[8px] font-black uppercase tracking-tighter bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/40"
+                                                >
+                                                    Banni
+                                                </Badge>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">{u.email}</TableCell>
+                                        <TableCell className="text-xs font-bold uppercase">{u.filiere}</TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                variant="outline"
+                                                className={`text-[8px] font-black uppercase tracking-tighter ${ROLE_BADGE_CLASSES[(u.role || '').toLowerCase()] || 'bg-muted text-foreground border-border'}`}
+                                            >
+                                                {u.role || 'Étudiant'}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        aria-label={`Actions pour ${u.firstName || ''} ${u.lastName || ''}`}
+                                                    >
+                                                        <MoreVertical className="w-4 h-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-56">
+                                                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                                        Actions
+                                                    </DropdownMenuLabel>
+                                                    <DropdownMenuSeparator />
+                                                    {canEdit && (
+                                                        <DropdownMenuItem onClick={() => openEditDialog(u)}>
+                                                            <Pencil />
+                                                            Modifier
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    <DropdownMenuItem asChild>
+                                                        <a href={`/profile/${u.id}`} target="_blank" rel="noreferrer">
+                                                            <ExternalLink />
+                                                            Ouvrir le profil
+                                                        </a>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem onClick={() => copyUserId(u.id)}>
+                                                        <Copy />
+                                                        Copier l’identifiant
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => copyEmail(u)}>
+                                                        <Mail />
+                                                        Copier l’email
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => copyProfileLink(u)}>
+                                                        <Link2 />
+                                                        Copier le lien du profil
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    {canEdit && (
+                                                        <DropdownMenuSub>
+                                                            <DropdownMenuSubTrigger disabled={isSelf}>
+                                                                <ShieldCheck />
+                                                                Changer le rôle
+                                                            </DropdownMenuSubTrigger>
+                                                            <DropdownMenuSubContent>
+                                                                {ASSIGNABLE_ROLES.map((role) => (
+                                                                    <DropdownMenuItem
+                                                                        key={role.value}
+                                                                        disabled={(u.role || 'student') === role.value}
+                                                                        onClick={() => changeUserRole(u, role.value)}
+                                                                    >
+                                                                        {role.label}
+                                                                    </DropdownMenuItem>
+                                                                ))}
+                                                            </DropdownMenuSubContent>
+                                                        </DropdownMenuSub>
+                                                    )}
+                                                    {canEdit && (
+                                                        <DropdownMenuItem onClick={() => toggleEmailVerification(u)}>
+                                                            <BadgeCheck />
+                                                            {u.verifiedEmail ? 'Retirer la vérification' : 'Vérifier l’email'}
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    <DropdownMenuItem asChild>
+                                                        <a href={`/messages/${u.id}`} target="_blank" rel="noreferrer">
+                                                            <MessageSquare />
+                                                            Envoyer un message
+                                                        </a>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => openNotificationDialog([u])}>
+                                                        <Bell />
+                                                        Envoyer une notification
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => setActivityTarget(u)}>
+                                                        <Clock />
+                                                        Voir l’activité
+                                                    </DropdownMenuItem>
+                                                    {canEdit && (
+                                                        <>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem onClick={() => sendPasswordReset(u)}>
+                                                                <KeyRound />
+                                                                Réinitialiser le mot de passe
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => sendVerificationEmail(u)}>
+                                                                <MailCheck />
+                                                                Envoyer l’email de vérification
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem disabled={isSelf} onClick={() => openBanDialog(u)}>
+                                                                <Ban />
+                                                                {isBanned(u) ? 'Débannir l’utilisateur' : 'Bannir l’utilisateur'}
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                disabled={isSelf}
+                                                                onClick={() => deleteUser(u)}
+                                                                className="text-red-600 focus:text-red-600 dark:text-red-400"
+                                                            >
+                                                                <Trash2 />
+                                                                Supprimer l’utilisateur
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>
@@ -587,6 +1100,164 @@ export default function AdminUsers({ users, canEdit = false }) {
                             </Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={Boolean(banTarget)} onOpenChange={(open) => !open && !banSaving && setBanTarget(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {isBanned(banTarget) ? 'Débannir l’utilisateur' : 'Bannir l’utilisateur'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {banTarget?.firstName || ''} {banTarget?.lastName || ''} ({banTarget?.email || 'sans email'})
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {isBanned(banTarget) ? (
+                        <div className="space-y-4">
+                            <p className="text-sm text-muted-foreground">
+                                Ce compte est actuellement désactivé. La réactivation permettra à l’utilisateur de se reconnecter.
+                            </p>
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setBanTarget(null)} disabled={banSaving}>
+                                    Annuler
+                                </Button>
+                                <Button type="button" onClick={submitBan} disabled={banSaving}>
+                                    {banSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Réactiver le compte
+                                </Button>
+                            </DialogFooter>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label htmlFor="ban-reason" className="text-sm font-medium">Motif</label>
+                                <Textarea
+                                    id="ban-reason"
+                                    value={banForm.reason}
+                                    onChange={(event) => setBanForm((form) => ({ ...form, reason: event.target.value }))}
+                                    placeholder="Expliquez la raison du bannissement..."
+                                    className="min-h-20"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label htmlFor="ban-duration" className="text-sm font-medium">Durée</label>
+                                <Select
+                                    value={banForm.duration}
+                                    onValueChange={(value) => setBanForm((form) => ({ ...form, duration: value }))}
+                                >
+                                    <SelectTrigger id="ban-duration">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {BAN_DURATIONS.map((duration) => (
+                                            <SelectItem key={duration.value} value={duration.value}>
+                                                {duration.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setBanTarget(null)} disabled={banSaving}>
+                                    Annuler
+                                </Button>
+                                <Button type="button" variant="destructive" onClick={submitBan} disabled={banSaving}>
+                                    {banSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Bannir
+                                </Button>
+                            </DialogFooter>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={notifyTargets.length > 0} onOpenChange={(open) => !open && !notifySending && setNotifyTargets([])}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Envoyer une notification</DialogTitle>
+                        <DialogDescription>
+                            {notifyTargets.length === 1
+                                ? `Destinataire : ${notifyTargets[0]?.firstName || ''} ${notifyTargets[0]?.lastName || ''}`
+                                : `${notifyTargets.length} destinataires`}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={(event) => { event.preventDefault(); submitNotification(); }} className="space-y-4">
+                        <div className="space-y-2">
+                            <label htmlFor="notification-title" className="text-sm font-medium">Titre</label>
+                            <Input
+                                id="notification-title"
+                                value={notifyForm.title}
+                                onChange={(event) => setNotifyForm((form) => ({ ...form, title: event.target.value }))}
+                                placeholder="Titre de la notification"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label htmlFor="notification-message" className="text-sm font-medium">Message</label>
+                            <Textarea
+                                id="notification-message"
+                                value={notifyForm.message}
+                                onChange={(event) => setNotifyForm((form) => ({ ...form, message: event.target.value }))}
+                                placeholder="Contenu de la notification..."
+                                className="min-h-24"
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setNotifyTargets([])} disabled={notifySending}>
+                                Annuler
+                            </Button>
+                            <Button type="submit" disabled={notifySending || !notifyForm.title.trim() || !notifyForm.message.trim()}>
+                                {notifySending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Envoyer
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={Boolean(activityTarget)} onOpenChange={(open) => !open && setActivityTarget(null)}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Activité de l’utilisateur</DialogTitle>
+                        <DialogDescription>
+                            {activityTarget?.firstName || ''} {activityTarget?.lastName || ''} — {activityTarget?.email || 'sans email'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <InfoItem label="Identifiant" value={activityTarget?.id} />
+                        <InfoItem label="Rôle" value={activityTarget?.role || 'Étudiant'} />
+                        <InfoItem label="Filière" value={activityTarget?.filiere} />
+                        <InfoItem label="Année d’entrée" value={activityTarget?.startYear} />
+                        <InfoItem label="Inscrit le" value={formatDate(activityTarget?.createdAt)} />
+                        <InfoItem label="Dernière mise à jour" value={formatDate(activityTarget?.updatedAt)} />
+                        <InfoItem label="Email vérifié le" value={formatDate(activityTarget?.verifiedAt)} />
+                        <InfoItem
+                            label="Statut"
+                            value={isBanned(activityTarget)
+                                ? (activityTarget?.bannedUntil ? `Banni jusqu’au ${formatDate(activityTarget.bannedUntil)}` : 'Banni définitivement')
+                                : 'Actif'}
+                        />
+                        <InfoItem label="Contributions" value={String(countEntries(activityTarget?.contributions))} />
+                        <InfoItem label="Projets" value={String(countEntries(activityTarget?.projectBriefs))} />
+                        <InfoItem label="Soumissions" value={String(countEntries(activityTarget?.projectSubmissions))} />
+                        <InfoItem label="Vitrines" value={String(countEntries(activityTarget?.projectShowcases))} />
+                        <InfoItem
+                            label="Abonnement"
+                            value={activityTarget?.subscription?.type
+                                ? `${activityTarget.subscription.type}${activityTarget.subscription.expiresAt ? ` (jusqu’au ${formatDate(activityTarget.subscription.expiresAt)})` : ''}`
+                                : 'Aucun'}
+                        />
+                        <InfoItem label="Motif du bannissement" value={activityTarget?.banReason} />
+                    </div>
+
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setActivityTarget(null)}>
+                            Fermer
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

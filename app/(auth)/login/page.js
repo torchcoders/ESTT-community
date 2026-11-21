@@ -100,7 +100,11 @@ export default function LoginPage() {
             setTimeout(() => router.replace(getRedirectPath()), hasReward ? 3500 : 1000);
         } catch (error) {
             console.error(error);
-            setMessage(error.message || 'Erreur lors de la connexion avec Google.');
+            if (error.code === 'auth/user-disabled') {
+                setMessage('Votre compte a été désactivé. Contactez un administrateur.');
+            } else {
+                setMessage(error.message || 'Erreur lors de la connexion avec Google.');
+            }
         } finally {
             setGoogleLoading(false);
         }
@@ -183,7 +187,13 @@ export default function LoginPage() {
             setTimeout(() => router.replace(getRedirectPath()), hasReward ? 3500 : 1000);
         } catch (error) {
             console.error(error);
-            setMessage('Identifiants invalides ou erreur de connexion.');
+            if (error.message?.includes('banni')) {
+                setMessage(error.message);
+            } else if (error.code === 'auth/user-disabled') {
+                setMessage('Votre compte a été désactivé. Contactez un administrateur.');
+            } else {
+                setMessage('Identifiants invalides ou erreur de connexion.');
+            }
             setLoading(false);
         }
     };

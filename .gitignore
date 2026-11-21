@@ -1,61 +1,113 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# ==========================================
+# Dependencies
+# ==========================================
 /node_modules
 /.pnp
 .pnp.js
 
-# testing
-/coverage
-/hidden
-
-# next.js
+# ==========================================
+# Next.js Build & Output
+# ==========================================
 /.next/
 /out/
-
-# production
 /build
+/dist
+/.swc/
 
-# static files
-/static
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# local env files
-.env*.local
-.env
-
-# vercel
-.vercel
-
-# typescript
+# ==========================================
+# TypeScript Cache
+# ==========================================
 *.tsbuildinfo
 next-env.d.ts
 
-# IDE
-.vscode
-.idea
+# ==========================================
+# Environment Variables & Credentials
+# ==========================================
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
+*.pem
+*.key
+*.crt
+credentials.json
+service-account*.json
 
+# ==========================================
+# Testing & Code Coverage
+# ==========================================
+/coverage
+/.nyc_output
+
+# ==========================================
+# Logs & Debugging
+# ==========================================
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==========================================
+# Operating System Files
+# ==========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ==========================================
+# IDEs & Text Editors
+# ==========================================
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# ==========================================
+# Cloud & Deployment Platforms
+# ==========================================
+.vercel
+
+# ==========================================
+# Local / Private Project & Documentation Files
+# ==========================================
+# Internal docs, feature plans, testing guides & reports
+docs/
+
+# Database backups, schema rules archive & dumps
+database-rules-and-backup/
+
+# Temporary scratch folders and routes
+hidden/
+app/temp/
 USER_FILES/
-seopage
-.todo
-# testing 
+seopage/
 app/(core)/styles/page.js
+
+# Local scripts & test runners
+scripts/*.local.js
+scripts/test-role-escalation.js
+scripts/clean-anonymous-firebase-users-auto.js
+
+# Local notes, rules & agent instructions
+.todo
+instructions.md
 rules.md
 experience.md
-apps/temp
-
-logs
-
-docs
-logs
-instructions.md
-*.log
-
-database-rules-and-backup

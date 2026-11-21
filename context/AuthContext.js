@@ -12,7 +12,7 @@ import {
     sendEmailVerification,
     GoogleAuthProvider
 } from 'firebase/auth';
-import { auth, db, ref, onValue } from '@/lib/firebase';
+import { auth, db, ref, onValue, get, update } from '@/lib/firebase';
 
 const AuthContext = createContext({});
 
@@ -36,7 +36,22 @@ export const AuthProvider = ({ children }) => {
                 const profileRef = ref(db, `users/${user.uid}`);
                 unsubscribeProfile = onValue(profileRef, (snapshot) => {
                     if (snapshot.exists()) {
-                        setProfile(snapshot.val());
+                        const nextProfile = snapshot.val();
+                        setProfile(nextProfile);
+
+                        if (nextProfile?.banned === true) {
+                            if (nextProfile.bannedUntil && nextProfile.bannedUntil <= Date.now()) {
+                                update(profileRef, {
+                                    banned: null,
+                                    banReason: null,
+                                    bannedAt: null,
+                                    bannedUntil: null,
+                                    bannedBy: null,
+                                }).catch((error) => console.error('Failed to clear expired ban:', error));
+                            } else {
+                                firebaseSignOut(auth).catch((error) => console.error('Failed to sign out banned user:', error));
+                            }
+                        }
                     } else {
                         setProfile(null);
                     }
@@ -64,8 +79,28 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
 
-    const signIn = (email, password) => {
-        return signInWithEmailAndPassword(auth, email, password);
+    const signIn = async (email, password) => {
+        const credential = await signInWithEmailAndPassword(auth, email, password);
+        const profileRef = ref(db, `users/${credential.user.uid}`);
+        const profileSnap = await get(profileRef);
+        const nextProfile = profileSnap.val();
+
+        if (nextProfile?.banned === true) {
+            if (nextProfile.bannedUntil && nextProfile.bannedUntil <= Date.now()) {
+                await update(profileRef, {
+                    banned: null,
+                    banReason: null,
+                    bannedAt: null,
+                    bannedUntil: null,
+                    bannedBy: null,
+                });
+            } else {
+                await firebaseSignOut(auth);
+                throw new Error(nextProfile.banReason ? `Compte banni : ${nextProfile.banReason}` : 'Votre compte est banni.');
+            }
+        }
+
+        return credential;
     };
 
     const signUp = (email, password) => {
@@ -131,6 +166,22 @@ export const AuthProvider = ({ children }) => {
                     filiere: 'À compléter',
                     startYear: new Date().getFullYear().toString()
                 });
+            } else {
+                const nextProfile = profileSnap.val();
+                if (nextProfile?.banned === true) {
+                    if (nextProfile.bannedUntil && nextProfile.bannedUntil <= Date.now()) {
+                        await update(userRef, {
+                            banned: null,
+                            banReason: null,
+                            bannedAt: null,
+                            bannedUntil: null,
+                            bannedBy: null,
+                        });
+                    } else {
+                        await firebaseSignOut(auth);
+                        throw new Error(nextProfile.banReason ? `Compte banni : ${nextProfile.banReason}` : 'Votre compte est banni.');
+                    }
+                }
             }
 
             return { ...result, accessToken };
