@@ -16,7 +16,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Badge, Loader2, FileText, Video, ImageIcon, Link as LinkIcon, ArrowRight, User, Star, BookOpen, ClipboardList, FlaskConical, Layers, Globe, ListPlus, Search, X } from 'lucide-react';
+import { Badge, Loader2, BookOpen, ClipboardList, FlaskConical, Layers, ListPlus, Search, X } from 'lucide-react';
+import ResourceCard from '@/components/features/resources/ResourceCard';
 
 const TYPE_CATEGORIES = [
     { id: 'all', label: 'Tous', icon: <Layers className="w-5 h-5 text-muted-foreground" /> },
@@ -123,43 +124,6 @@ export default function MyListPage() {
         }
     };
 
-    const ensureProtocol = (url) => {
-        if (!url) return '';
-        if (url.startsWith('http://') || url.startsWith('https://')) return url;
-        return `https://${url}`;
-    };
-
-    const getResourceIcon = (type) => {
-        switch (type) {
-            case 'pdf': return <FileText className="w-5 h-5" />;
-            case 'video': return <Video className="w-5 h-5" />;
-            case 'image': return <ImageIcon className="w-5 h-5" />;
-            case 'link': return <LinkIcon className="w-5 h-5" />;
-            case 'html': return <Globe className="w-5 h-5" />;
-            default: return <FileText className="w-5 h-5" />;
-        }
-    };
-
-    const renderRating = (resource) => {
-        const average = resource.ratingAverage;
-        const count = resource.ratingCount || 0;
-        if (!average || count === 0) return null;
-        const rounded = Math.round(average * 10) / 10;
-        return (
-            <div className="flex items-center gap-1 mt-1.5">
-                <div className="flex items-center gap-0.5">
-                    {[1, 2, 3, 4, 5].map((value) => (
-                        <Star
-                            key={value}
-                            className={`w-3 h-3 ${value <= Math.round(average) ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'}`}
-                        />
-                    ))}
-                </div>
-                <span className="text-[11px] text-muted-foreground">{rounded.toFixed(1)} ({count})</span>
-            </div>
-        );
-    };
-
     const filteredFavorites = useMemo(() => {
         return favorites.filter((fav) => {
             const resource = resources[fav.resourceId || fav.id] || fav;
@@ -218,68 +182,14 @@ export default function MyListPage() {
         );
     }
 
-    const renderCard = (resourceId, resource) => {
-        const rawUrl = resource.url || resource.link || resource.file;
-        const validUrl = rawUrl ? ensureProtocol(rawUrl) : null;
-
-        return (
-            <Link
-                key={resourceId}
-                href={`/resource/${resourceId}`}
-                className="group flex flex-col h-full border border-border rounded-xl hover:border-primary/50 transition-all hover:shadow-md bg-card p-5 cursor-pointer"
-            >
-                <div className="flex items-start gap-3 mb-3">
-                    <div className="p-2.5 bg-muted rounded-xl text-muted-foreground shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                        {getResourceIcon(resource.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug">
-                            {resource.title || 'Ressource'}
-                        </h3>
-                        <div className="flex flex-col mt-1.5 gap-1">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                                {resource.professor && (
-                                    <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
-                                        <User className="w-3 h-3" />
-                                        {resource.professor}
-                                    </span>
-                                )}
-                                <span className="text-[10px] font-bold uppercase py-0.5 px-1.5 bg-muted text-muted-foreground rounded">
-                                    {resource.type}
-                                </span>
-                                {resource.docType && (
-                                    <span className="text-[10px] font-bold uppercase py-0.5 px-1.5 bg-primary/10 text-primary rounded">
-                                        {resource.docType}
-                                    </span>
-                                )}
-                            </div>
-                            {renderRating(resource)}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                    <button
-                        onClick={(e) => handleRemoveFavorite(e, resourceId)}
-                        disabled={togglingFav === resourceId}
-                        className="text-xs font-bold flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-500 transition-colors dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
-                    >
-                        {togglingFav === resourceId ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                            <X className="w-3 h-3" />
-                        )}
-                        Retirer
-                    </button>
-                    {validUrl && (
-                        <span className="text-xs font-bold text-primary group-hover:underline flex items-center gap-1 bg-primary/5 px-2.5 py-1 rounded-full">
-                            Ouvrir <ArrowRight className="w-3 h-3" />
-                        </span>
-                    )}
-                </div>
-            </Link>
-        );
-    };
+    const renderCard = (resourceId, resource) => (
+        <ResourceCard
+            key={resourceId}
+            resource={{ id: resourceId, ...resource }}
+            togglingFav={togglingFav}
+            onRemove={handleRemoveFavorite}
+        />
+    );
 
     const availableSemesters = selectedField !== 'all'
         ? (staticDb.fields.find(f => f.id === selectedField)?.semesters || staticDb.semesters)

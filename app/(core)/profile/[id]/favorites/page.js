@@ -5,8 +5,9 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { db, ref, get } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, FileText, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { resolveUidFromIdentifier } from '@/lib/utils';
+import ResourceCard from '@/components/features/resources/ResourceCard';
 
 export default function FavoritesPage() {
     const { id } = useParams();
@@ -33,10 +34,20 @@ export default function FavoritesPage() {
                 const snap = await get(favRef);
                 if (snap.exists()) {
                     const data = snap.val();
-                    const list = Object.entries(data).map(([favId, value]) => ({
-                        id: favId,
-                        ...value,
-                    }));
+
+                    // Enrich with full resource data (url, link, file) so PDF covers can render
+                    const resourcesSnap = await get(ref(db, 'resources'));
+                    const allResources = resourcesSnap.val() || {};
+
+                    const list = Object.entries(data).map(([favId, value]) => {
+                        const resId = value.resourceId || favId;
+                        const resData = allResources[resId] || {};
+                        return {
+                            id: resId,
+                            ...value,
+                            ...resData,
+                        };
+                    });
                     list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                     setFavorites(list);
                 } else {
@@ -54,7 +65,6 @@ export default function FavoritesPage() {
     }, [resolvedUid]);
 
     const isOwnProfile = currentUser && currentUser.uid === resolvedUid;
-
 
     return (
         <main className="min-h-screen bg-card py-12 border-t border-border">
@@ -88,42 +98,20 @@ export default function FavoritesPage() {
                         </p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {favorites.map((fav) => (
-                            <Link
+                            <ResourceCard
                                 key={fav.id}
-                                href={`/resource/${fav.resourceId}`}
-                                className="group p-4 border border-border rounded-xl hover:border-primary/50 transition-colors bg-card flex flex-col justify-between"
-                            >
-                                <div className="flex items-start gap-3 mb-3">
-                                    <div className="p-2 bg-muted rounded-lg text-muted-foreground shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                                        <FileText className="w-4 h-4" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h2 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
-                                            {fav.title || 'Ressource'}
-                                        </h2>
-                                        <div className="flex flex-wrap gap-1 mt-1 text-[10px] uppercase text-muted-foreground">
-                                            {fav.type && <span>{fav.type}</span>}
-                                            {fav.docType && (
-                                                <span className="text-primary">· {fav.docType}</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="mt-auto pt-2 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
-                                    {fav.createdAt && (
-                                        <span>
-                                            Enregistrée le{' '}
-                                            {new Date(fav.createdAt).toLocaleDateString()}
+                                resource={fav}
+                                showModule={true}
+                                footerLeft={
+                                    fav.createdAt ? (
+                                        <span className="text-[11px] text-muted-foreground">
+                                            Enregistrée le {new Date(fav.createdAt).toLocaleDateString()}
                                         </span>
-                                    )}
-                                    <span className="ml-auto flex items-center gap-1 text-primary font-semibold">
-                                        Ouvrir
-                                        <ArrowRight className="w-3 h-3" />
-                                    </span>
-                                </div>
-                            </Link>
+                                    ) : null
+                                }
+                            />
                         ))}
                     </div>
                 )}
@@ -131,4 +119,3 @@ export default function FavoritesPage() {
         </main>
     );
 }
-
