@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { db, ref, onValue } from '@/lib/firebase';
-import { Loader2, ArrowRight, User } from 'lucide-react';
+import { Loader2, User } from 'lucide-react';
+import ResourceCard from '@/components/features/resources/ResourceCard';
 
 export default function ActivityFeed() {
     const [activities, setActivities] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // We listen to resources
         const resourcesRef = ref(db, 'resources');
 
         const unsubscribeResources = onValue(resourcesRef, (snapshot) => {
@@ -17,53 +17,41 @@ export default function ActivityFeed() {
             const resourceList = [];
             const seenIds = new Set();
 
+            const processResource = (id, resource) => {
+                if (!seenIds.has(id) && !resource.unverified && resource.title) {
+                    resourceList.push({
+                        id,
+                        title: resource.title,
+                        type: resource.type || 'pdf',
+                        docType: resource.docType,
+                        url: resource.url,
+                        link: resource.link,
+                        file: resource.file,
+                        module: resource.module,
+                        moduleId: resource.moduleId,
+                        semester: resource.semester,
+                        field: resource.field,
+                        professor: resource.professor,
+                        ratingAverage: resource.ratingAverage,
+                        ratingCount: resource.ratingCount,
+                        author: resource.authorName || 'Anonyme',
+                        authorId: resource.authorId,
+                        timestamp: resource.createdAt || resource.created_at || Date.now(),
+                    });
+                    seenIds.add(id);
+                }
+            };
+
             // Flatten resources and de-duplicate
             Object.entries(resourceData).forEach(([key, value]) => {
-                // Some resources are nested under module IDs, others are flat
                 if (typeof value === 'object' && value !== null && !value.title) {
                     // Nested under module
                     Object.entries(value).forEach(([id, resource]) => {
-                        if (!seenIds.has(id)) {
-                            // Only add if NOT unverified
-                            if (!resource.unverified) {
-                                resourceList.push({
-                                    id,
-                                    type: 'resource',
-                                    title: resource.title,
-                                    module: resource.module,
-                                    semester: resource.semester,
-                                    field: resource.field,
-                                    author: resource.authorName || 'Anonyme',
-                                    authorId: resource.authorId,
-                                    timestamp: resource.createdAt || resource.created_at || Date.now(),
-                                    href: `/resource/${id}`
-                                });
-                                seenIds.add(id);
-                            }
-                        }
+                        processResource(id, resource);
                     });
-                } else {
+                } else if (typeof value === 'object' && value !== null) {
                     // Flat structure
-                    const id = key;
-                    const resource = value;
-                    if (!seenIds.has(id)) {
-                        // Only add if NOT unverified
-                        if (!resource.unverified) {
-                            resourceList.push({
-                                id,
-                                type: 'resource',
-                                title: resource.title,
-                                module: resource.module,
-                                semester: resource.semester,
-                                field: resource.field,
-                                author: resource.authorName || 'Anonyme',
-                                authorId: resource.authorId,
-                                timestamp: resource.createdAt || resource.created_at || Date.now(),
-                                href: `/resource/${id}`
-                            });
-                            seenIds.add(id);
-                        }
-                    }
+                    processResource(key, value);
                 }
             });
 
@@ -84,67 +72,37 @@ export default function ActivityFeed() {
 
     if (activities.length === 0) return <div className="col-span-full py-20 text-center text-muted-foreground italic">Aucune activité récente.</div>;
 
-    const getFieldColor = (field) => {
-        switch (field?.toLowerCase()) {
-            case 'ia': return 'text-purple-600';
-            case 'casi': return 'text-blue-600';
-            case 'insem': return 'text-orange-600';
-            case 'idd': return 'text-green-600';
-            default: return 'text-muted-foreground';
-        }
-    };
-
     const formatDate = (timestamp) => {
-        if (!timestamp) return 'Date inconnue';
+        if (!timestamp) return '';
         const date = new Date(timestamp);
-        if (isNaN(date.getTime())) return 'Date invalide';
+        if (isNaN(date.getTime())) return '';
         return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
     };
 
     return (
         <>
             {activities.map((activity) => (
-                <a
+                <ResourceCard
                     key={activity.id}
-                    href={activity.href}
-                    className="group block p-3 md:p-6 bg-card border border-border rounded-xl hover:border-primary/50 transition-colors h-full"
-                >
-                    <div className="flex items-center justify-between mb-2 md:mb-4">
-                        <span className="text-[8px] md:text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                            {activity.type === 'resource' ? 'Ressource' : 'Article'}
-                        </span>
-                        <time className="text-[8px] md:text-[10px] text-muted-foreground font-medium whitespace-nowrap">
-                            {formatDate(activity.timestamp)}
-                        </time>
-                    </div>
-
-                    <h3 className="text-xs md:text-base font-bold text-foreground group-hover:text-primary transition-colors mb-2 md:mb-4 line-clamp-2 min-h-[2.5em] md:min-h-0">
-                        {activity.title}
-                    </h3>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-2 md:pt-4 border-t border-border">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                            <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-muted flex-shrink-0 flex items-center justify-center">
-                                <User className="w-2.5 h-2.5 md:w-3 md:h-3 text-muted-foreground" />
+                    resource={activity}
+                    showModule={true}
+                    footerLeft={
+                        <div className="flex items-center gap-1.5 min-w-0 text-muted-foreground text-[11px]">
+                            <div className="w-4 h-4 rounded-full bg-muted flex-shrink-0 flex items-center justify-center">
+                                <User className="w-2.5 h-2.5 text-muted-foreground" />
                             </div>
-                            <span className="text-[10px] md:text-xs text-muted-foreground font-medium truncate">
+                            <span className="font-medium truncate max-w-[90px] sm:max-w-[120px]">
                                 {activity.author}
                             </span>
+                            {activity.timestamp && (
+                                <span className="opacity-60 text-[10px] whitespace-nowrap">
+                                    · {formatDate(activity.timestamp)}
+                                </span>
+                            )}
                         </div>
-                        <div className="sm:ml-auto flex items-center gap-1 text-[8px] md:text-[10px] font-bold uppercase">
-                            <span className={cn(getFieldColor(activity.field), "truncate max-w-[50px] md:max-w-none")}>
-                                {activity.field || activity.module || 'ESTT'}
-                            </span>
-                            <ArrowRight className="w-2 h-2 md:w-3 md:h-3 group-hover:translate-x-0.5 transition-transform" />
-                        </div>
-                    </div>
-                </a>
+                    }
+                />
             ))}
         </>
     );
-}
-
-// Internal helper for Tailwind classes if needed (since it's a separate file)
-function cn(...inputs) {
-    return inputs.filter(Boolean).join(' ');
 }

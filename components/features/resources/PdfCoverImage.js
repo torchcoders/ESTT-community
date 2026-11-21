@@ -32,15 +32,6 @@ function isGoogleDriveUrl(url) {
     return /drive\.google\.com|docs\.google\.com/.test(url);
 }
 
-/** True if the URL path ends with .pdf (before query/hash) */
-function endsWithPdf(url) {
-    try {
-        return new URL(url).pathname.toLowerCase().endsWith('.pdf');
-    } catch {
-        return url.toLowerCase().includes('.pdf');
-    }
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 /**
