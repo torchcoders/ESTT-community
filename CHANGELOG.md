@@ -1,3 +1,18 @@
+# [1.43.0](https://github.com/torchcoders/ESTT-community/compare/v1.42.0...v1.43.0) (2026-11-21)
+
+
+### Bug Fixes
+
+* resolve PDF cover preview issues ([9b78cf2](https://github.com/torchcoders/ESTT-community/commit/9b78cf2aea94d628187a6c4796d1b830eec20a12))
+
+
+### Features
+
+* add PDF cover image preview on resource cards in browse page ([9387f02](https://github.com/torchcoders/ESTT-community/commit/9387f021ae2581e7778f1f99bfc7777e64b2759b))
+* add user activity time tracking, admin analytics panel, and privacy update dialog ([4e43268](https://github.com/torchcoders/ESTT-community/commit/4e43268fc09db51c67b7de660aa49f8b6b23eb66))
+* apply PDF 16:9 cover image preview across all resource cards ([46a49fa](https://github.com/torchcoders/ESTT-community/commit/46a49fa8bedb603f62e4ff9bc6cef77af617b1ec))
+* ressouce-image-cover Merge PR[#59](https://github.com/torchcoders/ESTT-community/issues/59)  ([51dbe5c](https://github.com/torchcoders/ESTT-community/commit/51dbe5c5a73953abf5b7a1e8ca0f24b409f7e30b))
+
 # [1.42.0](https://github.com/torchcoders/ESTT-community/compare/v1.41.0...v1.42.0) (2026-11-21)
 
 
