@@ -1,3 +1,10 @@
+# [1.42.0](https://github.com/torchcoders/ESTT-community/compare/v1.41.0...v1.42.0) (2026-11-21)
+
+
+### Features
+
+* add admin API routes, update auth flow, AdminUsers, service worker, and gitignore ([a628b1f](https://github.com/torchcoders/ESTT-community/commit/a628b1f82b0485a64d6b39427c1b7d07b2a2771d))
+
 # [1.41.0](https://github.com/torchcoders/ESTT-community/compare/v1.40.0...v1.41.0) (2026-10-24)
 
 
