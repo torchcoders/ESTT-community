@@ -133,7 +133,7 @@ export default function PdfCoverImage({ pdfUrl, alt = 'Couverture du document', 
     return (
         <div
             className={`relative w-full overflow-hidden rounded-t-xl bg-muted ${className}`}
-            style={{ aspectRatio: '4/3' }}
+            style={{ aspectRatio: '16/9' }}
         >
             {/* ── Shimmer while pdfjs is rendering ── */}
             {status === 'loading' && (
