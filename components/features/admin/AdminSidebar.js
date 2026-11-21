@@ -2,6 +2,7 @@ import {
     LayoutDashboard,
     FileText,
     Users,
+    Clock,
     AlertCircle,
     Building2,
     Edit3,
@@ -124,6 +125,14 @@ export default function AdminSidebar({
                         title={isCollapsed ? 'Utilisateurs' : undefined}
                     >
                         <Users className="w-4 h-4" /> <span className={labelClass}>Utilisateurs</span>
+                    </Button>
+                    <Button
+                        variant={activeTab === 'activity' ? 'default' : 'ghost'}
+                        className="justify-start gap-3 h-11"
+                        onClick={() => setActiveTab('activity')}
+                        title={isCollapsed ? "Temps d'activité" : undefined}
+                    >
+                        <Clock className="w-4 h-4" /> <span className={labelClass}>Temps d&apos;activité</span>
                     </Button>
                     <Button
                         variant={activeTab === 'reports' ? 'default' : 'ghost'}

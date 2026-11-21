@@ -11,6 +11,8 @@ import { DialogProvider } from '@/context/DialogContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import LocalDevServiceWorkerCleanup from '@/components/providers/LocalDevServiceWorkerCleanup';
+import ActivityTracker from '@/components/providers/ActivityTracker';
+import PrivacyUpdateDialog from '@/components/legal/PrivacyUpdateDialog';
 import { defaultMetadata } from '@/lib/metadata';
 
 const canela = localFont({
@@ -92,6 +94,8 @@ export default function RootLayout({ children }) {
                             <AuthGuard>
                                 <NotificationProvider>
                                     <LocalDevServiceWorkerCleanup />
+                                    <ActivityTracker />
+                                    <PrivacyUpdateDialog />
                                     <Header />
                                     {children}
                                     <Footer />

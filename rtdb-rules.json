@@ -1,0 +1,301 @@
+
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "users": {
+      ".read": "auth != null",
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((root.child('users').child(auth.uid).child('role').val() == 'admin' && data.exists() && newData.child('role').val() == data.child('role').val()) || (auth.uid == $uid && ((!data.exists() && (newData.child('role').val() == null || newData.child('role').val() == 'student')) || (data.exists() && newData.child('role').val() == data.child('role').val() && newData.child('isAdmin').val() == data.child('isAdmin').val() && newData.child('verified').val() == data.child('verified').val() && newData.child('verifiedEmail').val() == data.child('verifiedEmail').val() && newData.child('subscription').val() == data.child('subscription').val()))))",
+        ".validate": "newData.hasChildren(['email']) || !newData.exists()"
+      }
+    },
+
+    "emailExceptions": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() == 'admin'"
+    },
+
+    "resources": {
+      ".read": "auth != null",
+      "$resourceId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator' || (!data.exists() && newData.exists() && (newData.child('authorId').val() == auth.uid || newData.child('createdBy').val() == auth.uid || newData.child('uploadedBy').val() == auth.uid)))",
+        "ratingAverage": {
+          ".write": "auth != null && newData.isNumber() && newData.val() >= 0 && newData.val() <= 5"
+        },
+        "ratingCount": {
+          ".write": "auth != null && newData.isNumber() && newData.val() >= 0"
+        },
+        "comments": {
+          "$commentId": {
+            ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator' || (newData.exists() && (newData.child('userId').val() == auth.uid || newData.child('authorId').val() == auth.uid)) || (data.exists() && (data.child('userId').val() == auth.uid || data.child('authorId').val() == auth.uid)))"
+          }
+        },
+        "ratings": {
+          "$uid": {
+            ".read": "auth != null",
+            ".write": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')",
+            ".validate": "newData.hasChildren(['rating']) && newData.child('rating').isNumber() && newData.child('rating').val() >= 1 && newData.child('rating').val() <= 5"
+          }
+        }
+      }
+    },
+
+    "userFavorites": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')",
+        ".write": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'admin')"
+      }
+    },
+
+    "notifications": {
+      "global": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')"
+      },
+      "private": {
+        "$uid": {
+          ".read": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')",
+          ".write": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')"
+        }
+      }
+    },
+
+    "userConversations": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'admin')",
+        ".write": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'admin')",
+        "$senderUid": {
+          ".write": "auth != null && auth.uid == $senderUid && newData.child('lastMessageSenderId').val() == auth.uid && newData.child('otherUserId').val() == auth.uid"
+        }
+      }
+    },
+
+    "direct_messages": {
+      "$roomId": {
+        ".read": "auth != null && ($roomId.contains('dm_' + auth.uid + '_') || $roomId.endsWith('_' + auth.uid) || root.child('users').child(auth.uid).child('role').val() == 'admin')",
+        ".write": "auth != null && ($roomId.contains('dm_' + auth.uid + '_') || $roomId.endsWith('_' + auth.uid) || root.child('users').child(auth.uid).child('role').val() == 'admin')"
+      }
+    },
+
+    "discussions": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+
+    "projects": {
+      ".read": "auth != null",
+      "$projectId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator' || (newData.exists() && newData.child('createdBy').val() == auth.uid) || (data.exists() && data.child('createdBy').val() == auth.uid))"
+      }
+    },
+    "projectSubmissions": {
+      ".read": "auth != null",
+      "$submissionId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator' || (newData.exists() && newData.child('authorId').val() == auth.uid) || (data.exists() && data.child('authorId').val() == auth.uid))"
+      }
+    },
+    "projectShowcases": {
+      ".read": "auth != null",
+      "$showcaseId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator' || (newData.exists() && newData.child('authorId').val() == auth.uid) || (data.exists() && data.child('authorId').val() == auth.uid))"
+      }
+    },
+    "projectVotes": {
+      "$projectId": {
+        "$uid": {
+          ".read": "auth != null",
+          ".write": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')"
+        }
+      }
+    },
+
+    "clubs": {
+      ".read": "auth != null",
+      "$clubId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')",
+        "joinRequests": {
+          "$requestId": {
+            ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator' || data.child('userId').val() == auth.uid)",
+            ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator' || (newData.exists() && newData.child('userId').val() == auth.uid))"
+          }
+        },
+        "formSubmissions": {
+          "$formId": {
+            "$submissionId": {
+              ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator' || (newData.exists() && (newData.child('userId').val() == auth.uid || newData.child('uid').val() == auth.uid)))"
+            }
+          }
+        }
+      }
+    },
+    "clubPosts": {
+      ".read": "auth != null",
+      "$clubId": {
+        "$postId": {
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator' || (newData.exists() && newData.child('authorId').val() == auth.uid) || (data.exists() && data.child('authorId').val() == auth.uid))"
+        }
+      }
+    },
+    "clubRequests": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')",
+      "$requestId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator' || (newData.exists() && newData.child('requestedBy').val() == auth.token.email))"
+      }
+    },
+    "clubChangeRequests": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')",
+      "$requestId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator' || (newData.exists() && (newData.child('requestedBy').val() == auth.token.email || newData.child('requestedBy').val() == auth.uid)) || (data.exists() && (data.child('requestedBy').val() == auth.token.email || data.child('requestedBy').val() == auth.uid)))"
+      }
+    },
+
+    "tickets": {
+      ".read": "auth != null",
+      "$ticketId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator' || (newData.exists() && newData.child('userId').val() == auth.uid) || (data.exists() && data.child('userId').val() == auth.uid))"
+      }
+    },
+    "eventAttendees": {
+      "$eventId": {
+        "$uid": {
+          ".read": "auth != null",
+          ".write": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')"
+        }
+      }
+    },
+
+    "resourceContactThreads": {
+      ".read": "auth != null",
+      "$threadId": {
+        ".write": "auth != null"
+      }
+    },
+    "reports": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')",
+      "$reportId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator' || (newData.exists() && newData.child('reporterId').val() == auth.uid))"
+      }
+    },
+    "contactMessages": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')",
+      "$messageId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || (newData.exists() && newData.child('userId').val() == auth.uid))"
+      }
+    },
+    "bugReports": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')",
+      "$reportId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || (newData.exists() && newData.child('userId').val() == auth.uid))"
+      }
+    },
+
+    "studentAds": {
+      ".read": "auth != null",
+      "$adId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || (newData.exists() && newData.child('publisher').val() == auth.uid) || (data.exists() && data.child('publisher').val() == auth.uid))"
+      }
+    },
+    "metadata": {
+      ".read": "auth != null",
+      "professors": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')"
+      },
+      "keywords": {
+        "$fieldId": {
+          "$resourceId": {
+            ".write": "auth != null"
+          }
+        }
+      }
+    },
+    "module_resources": {
+      ".read": "auth != null",
+      "$moduleId": {
+        ".write": "auth != null"
+      }
+    },
+
+    "rewardCodes": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() == 'admin'",
+      "$codeId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || (newData.child('claimedBy').val() == auth.uid && data.child('claimedBy').val() == null))"
+      }
+    },
+    "qrClaims": {
+      "$claimId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || newData.child('uid').val() == auth.uid)"
+      }
+    },
+    "stickers": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() == 'admin'"
+    },
+
+    "resourceViews": {
+      ".read": "auth != null",
+      "$resourceId": {
+        ".write": "auth != null",
+        "viewCount": {
+          ".write": "auth != null && newData.isNumber() && newData.val() >= 0"
+        },
+        "views": {
+          "$viewId": {
+            ".write": "auth != null && (newData.child('uid').val() == auth.uid || newData.child('uid').val() == 'anonymous')"
+          }
+        }
+      }
+    },
+    "adminAnnouncements": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() == 'admin'"
+    },
+    "adminSettings": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() == 'admin'"
+    },
+    "shortUrls": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() == 'admin'"
+    },
+    "logs": {
+      "moderator": {
+        ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')",
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')"
+      }
+    },
+    "releases": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() == 'admin'"
+    },
+    "slack_events": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() == 'admin'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() == 'admin'"
+    },
+    "keys": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() == 'admin'",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() == 'admin'"
+    },
+
+    "userActivity": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')",
+      "$uid": {
+        ".read": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')",
+        ".write": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'admin')"
+      }
+    },
+
+    "pageActivity": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin' || root.child('users').child(auth.uid).child('role').val() == 'moderator')",
+      "$pageKey": {
+        ".write": "auth != null"
+      }
+    }
+  }
+}
