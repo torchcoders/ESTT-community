@@ -11,6 +11,7 @@ import {
     Loader2,
     PieChart as PieChartIcon,
     BarChart3,
+    Clock,
     } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -355,7 +356,7 @@ export default function AdminOverview({ stats, resources, users = [], bugReports
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-sm bg-primary text-white overflow-hidden col-span-2 lg:col-span-1">
+                <Card className="border-none shadow-sm bg-primary text-white overflow-hidden col-span-1">
                     <CardContent className="p-4 md:p-6">
                         <div className="flex items-center justify-between mb-2 md:mb-4">
                             <div className="p-1.5 md:p-2 bg-white/20 text-white rounded-lg">
@@ -364,6 +365,27 @@ export default function AdminOverview({ stats, resources, users = [], bugReports
                         </div>
                         <p className="text-[10px] md:text-sm font-bold opacity-80 uppercase tracking-wider">En attente</p>
                         <h3 className="text-xl md:text-3xl font-black mt-1">{stats.pending}</h3>
+                    </CardContent>
+                </Card>
+
+                <Card
+                    onClick={() => setActiveTab && setActiveTab('activity')}
+                    className="border-none shadow-sm bg-card overflow-hidden group col-span-1 cursor-pointer hover:shadow-md transition-all border-dashed hover:border-primary/40"
+                >
+                    <div className="h-1 bg-emerald-500 w-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <CardContent className="p-4 md:p-6">
+                        <div className="flex items-center justify-between mb-2 md:mb-4">
+                            <div className="p-1.5 md:p-2 bg-emerald-50 text-emerald-600 rounded-lg dark:bg-emerald-500/15 dark:text-emerald-300">
+                                <Clock className="w-4 h-4 md:w-5 md:h-5" />
+                            </div>
+                            <Badge variant="outline" className="text-[9px] md:text-[10px] border-emerald-100 text-emerald-600 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950">
+                                Nouveau
+                            </Badge>
+                        </div>
+                        <p className="text-[10px] md:text-sm font-bold text-muted-foreground uppercase tracking-wider">Temps d&apos;activité</p>
+                        <h3 className="text-sm md:text-base font-bold mt-2 text-primary group-hover:underline flex items-center gap-1">
+                            Voir statistiques →
+                        </h3>
                     </CardContent>
                 </Card>
             </div>

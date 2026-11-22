@@ -8,8 +8,9 @@ import { db as staticDb } from '@/lib/data';
 import { db, ref, get } from '@/lib/firebase';
 import {
     } from '@/components/ui/select';
-import { Loader2, FileText, Video, ImageIcon, Link as LinkIcon, ArrowRight, Search as SearchIcon, User, BookOpen, Sparkles, Globe } from 'lucide-react';
+import { Loader2, FileText, ArrowRight, Search as SearchIcon, BookOpen, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ResourceCard from '@/components/features/resources/ResourceCard';
 function SearchContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -123,17 +124,6 @@ function SearchContent() {
         e.preventDefault();
         if (searchInputValue.trim() && selectedField) {
             router.push(`/search?field=${selectedField}&q=${encodeURIComponent(searchInputValue)}`);
-        }
-    };
-
-    const getResourceIcon = (type) => {
-        switch (type) {
-            case 'pdf': return <FileText className="w-5 h-5" />;
-            case 'video': return <Video className="w-5 h-5" />;
-            case 'image': return <ImageIcon className="w-5 h-5" />;
-            case 'link': return <LinkIcon className="w-5 h-5" />;
-            case 'html': return <Globe className="w-5 h-5" />;
-            default: return <FileText className="w-5 h-5" />;
         }
     };
 
@@ -296,43 +286,12 @@ function SearchContent() {
                                 ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {results.resources.map((resource) => (
-                                            <div key={resource.id} className="group flex flex-col h-full border border-border rounded-xl hover:border-primary/50 transition-colors bg-card p-5">
-                                                <div className="flex items-start justify-between mb-4">
-                                                    <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                                                        {getResourceIcon(resource.type)}
-                                                    </div>
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{resource.type}</span>
-                                                </div>
-
-                                                <div className="flex-grow">
-                                                    <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                                                        {resource.title}
-                                                    </h3>
-                                                    {resource.description && (
-                                                        <p className="text-xs text-muted-foreground line-clamp-2 mt-2 leading-relaxed">
-                                                            {resource.description}
-                                                        </p>
-                                                    )}
-
-                                                    <div className="flex flex-col gap-1.5 mt-4">
-                                                        {resource.professor && (
-                                                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                                                <User className="w-3 h-3" />
-                                                                <span>{resource.professor}</span>
-                                                            </div>
-                                                        )}
-                                                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                                            <BookOpen className="w-3 h-3" />
-                                                            <span>{resource.module || resource.moduleId}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <Link href={`/resource/${resource.id}`} className="mt-5 pt-4 border-t border-border text-xs font-bold text-muted-foreground group-hover:text-primary transition-colors flex items-center justify-between">
-                                                    Ouvrir la ressource
-                                                    <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
-                                                </Link>
-                                            </div>
+                                            <ResourceCard
+                                                key={resource.id}
+                                                resource={resource}
+                                                showModule={true}
+                                                showDescription={true}
+                                            />
                                         ))}
                                     </div>
                                 )}

@@ -14,6 +14,7 @@ import AdminOverview from './AdminOverview';
 import AdminResources from './AdminResources';
 import AdminProjects from './AdminProjects';
 import AdminUsers from './AdminUsers';
+import AdminActivity from './AdminActivity';
 import AdminReports from './AdminReports';
 import AdminClubRequests from './AdminClubRequests';
 import AdminClubChanges from './AdminClubChanges';
@@ -35,6 +36,7 @@ const ADMIN_TABS = [
     'projects',
     'fastContribute',
     'users',
+    'activity',
     'reports',
     'bugReports',
     'clubRequests',
@@ -325,6 +327,10 @@ export default function AdminDashboard() {
 
                     {activeTab === 'users' && (
                         <AdminUsers users={users} canEdit />
+                    )}
+
+                    {activeTab === 'activity' && (
+                        <AdminActivity users={users} />
                     )}
 
                     {activeTab === 'reports' && (
