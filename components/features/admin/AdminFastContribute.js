@@ -194,20 +194,26 @@ export default function AdminFastContribute() {
                 const resourceId = newResourceRef.key;
                 await set(newResourceRef, contributionData);
 
-                // 3. Keywords & Module Mappings for ALL linked fields/modules
-                const allLinks = contributionData.fields || [];
-                for (const link of allLinks) {
-                    if (!link.fieldId || !link.moduleId) continue;
+                const linkedFields = contributionData.fields || [];
+                for (const link of linkedFields) {
+                    if (!link || typeof link !== 'object' || !link.fieldId || !link.moduleId) continue;
 
-                    // Index by Field for Search
                     const keywordRef = ref(db, `metadata/keywords/${link.fieldId}/${resourceId}`);
                     await set(keywordRef, {
                         title: resource.title,
-                        resourceId: resourceId
+                        resourceId
                     });
+                }
 
-                    // Index by Module for Browse
-                    const moduleMappingRef = ref(db, `module_resources/${link.moduleId}/${resourceId}`);
+                // Index the primary module and any linked modules for Browse
+                const moduleIds = new Set([
+                    contributionData.moduleId,
+                    ...linkedFields
+                        .map(link => (link && typeof link === 'object' ? link.moduleId : null))
+                ].filter(moduleId => typeof moduleId === 'string' && moduleId));
+
+                for (const mappedModuleId of moduleIds) {
+                    const moduleMappingRef = ref(db, `module_resources/${mappedModuleId}/${resourceId}`);
                     await set(moduleMappingRef, true);
                 }
 
