@@ -70,6 +70,9 @@ function RatingStars({ resource }) {
  *   onRemove        – (e, resourceId) => void
  *   showModule      – boolean: display module identifier/name
  *   showDescription – boolean: display description if present
+ *   showFullTitle   – boolean: wrap the complete title instead of clamping it
+ *   isCurrent       – whether this card represents the resource currently open
+ *   compact         – use tighter spacing and omit the card footer
  *   footerLeft      – optional custom JSX for the left side of the footer
  *   className       – extra wrapper class names
  */
@@ -81,6 +84,9 @@ export default function ResourceCard({
     onRemove        = null,
     showModule      = false,
     showDescription = false,
+    showFullTitle   = false,
+    isCurrent       = false,
+    compact         = false,
     footerLeft      = null,
     className       = '',
 }) {
@@ -94,7 +100,8 @@ export default function ResourceCard({
     return (
         <Link
             href={`/resource/${resourceId}`}
-            className={`group flex flex-col h-full border border-border rounded-xl hover:border-primary/50 transition-all hover:shadow-md bg-card cursor-pointer overflow-hidden ${className}`}
+            aria-current={isCurrent ? 'page' : undefined}
+            className={`group flex flex-col h-full border border-border rounded-xl hover:border-primary/50 transition-all hover:shadow-md bg-card cursor-pointer overflow-hidden ${isCurrent ? '!border-primary ring-2 ring-primary shadow-lg bg-primary/5' : ''} ${className}`}
         >
             {/* ── PDF 16:9 cover preview ── */}
             {isPdf && (
@@ -113,17 +120,22 @@ export default function ResourceCard({
                             </span>
                         )}
                     </div>
+                    {isCurrent && (
+                        <span className="absolute top-2 right-2 z-10 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground shadow-sm">
+                            En cours
+                        </span>
+                    )}
                 </div>
             )}
 
             {/* ── Card body ── */}
-            <div className="flex flex-col flex-1 p-5">
-                <div className="flex items-start gap-3 mb-3">
-                    <div className="p-2.5 bg-muted rounded-xl text-muted-foreground shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+            <div className={`flex flex-col flex-1 ${compact ? 'p-3' : 'p-5'}`}>
+                <div className={`flex items-start ${compact ? 'gap-2 mb-2' : 'gap-3 mb-3'}`}>
+                    <div className={`${compact ? 'p-1.5' : 'p-2.5'} bg-muted rounded-xl text-muted-foreground shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors`}>
                         {getResourceIcon(resource.type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug">
+                        <h3 className={`font-bold text-foreground group-hover:text-primary transition-colors leading-snug ${showFullTitle ? 'text-sm break-words' : 'text-base line-clamp-2'}`}>
                             {resource.title || 'Ressource'}
                         </h3>
 
@@ -168,52 +180,53 @@ export default function ResourceCard({
                     </p>
                 )}
 
-                {/* ── Footer ── */}
-                <div className="mt-auto pt-4 border-t border-border flex items-center justify-between gap-2">
-                    {/* Left side action or info */}
-                    {onRemove ? (
-                        <button
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(e, resourceId); }}
-                            disabled={togglingFav === resourceId}
-                            className="text-xs font-bold flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-500 transition-colors dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
-                        >
-                            {togglingFav === resourceId
-                                ? <Loader2 className="w-3 h-3 animate-spin" />
-                                : <X className="w-3 h-3" />
-                            }
-                            Retirer
-                        </button>
-                    ) : onToggleFav ? (
-                        <button
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFav(e, resource); }}
-                            disabled={togglingFav === resourceId}
-                            className={`text-xs font-bold flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors ${
-                                isFav
-                                    ? 'bg-primary/10 text-primary'
-                                    : 'bg-muted text-muted-foreground hover:bg-primary/5 hover:text-primary'
-                            }`}
-                        >
-                            {togglingFav === resourceId
-                                ? <Loader2 className="w-3 h-3 animate-spin" />
-                                : <ListPlus className="w-3 h-3" />
-                            }
-                            {isFav ? 'Dans ma liste' : 'Ajouter à ma liste'}
-                        </button>
-                    ) : footerLeft ? (
-                        footerLeft
-                    ) : (
-                        <span />
-                    )}
+                {!compact && (
+                    <div className="mt-auto pt-4 border-t border-border flex items-center justify-between gap-2">
+                        {/* Left side action or info */}
+                        {onRemove ? (
+                            <button
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(e, resourceId); }}
+                                disabled={togglingFav === resourceId}
+                                className="text-xs font-bold flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-500 transition-colors dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
+                            >
+                                {togglingFav === resourceId
+                                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                                    : <X className="w-3 h-3" />
+                                }
+                                Retirer
+                            </button>
+                        ) : onToggleFav ? (
+                            <button
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFav(e, resource); }}
+                                disabled={togglingFav === resourceId}
+                                className={`text-xs font-bold flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors ${
+                                    isFav
+                                        ? 'bg-primary/10 text-primary'
+                                        : 'bg-muted text-muted-foreground hover:bg-primary/5 hover:text-primary'
+                                }`}
+                            >
+                                {togglingFav === resourceId
+                                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                                    : <ListPlus className="w-3 h-3" />
+                                }
+                                {isFav ? 'Dans ma liste' : 'Ajouter à ma liste'}
+                            </button>
+                        ) : footerLeft ? (
+                            footerLeft
+                        ) : (
+                            <span />
+                        )}
 
-                    {/* Right side: open link */}
-                    {validUrl ? (
-                        <span className="text-xs font-bold text-primary group-hover:underline flex items-center gap-1 bg-primary/5 px-2.5 py-1 rounded-full whitespace-nowrap">
-                            Ouvrir <ArrowRight className="w-3 h-3" />
-                        </span>
-                    ) : (
-                        <span className="text-xs text-muted-foreground">Non disponible</span>
-                    )}
-                </div>
+                        {/* Right side: open link */}
+                        {validUrl ? (
+                            <span className="text-xs font-bold text-primary group-hover:underline flex items-center gap-1 bg-primary/5 px-2.5 py-1 rounded-full whitespace-nowrap">
+                                Ouvrir <ArrowRight className="w-3 h-3" />
+                            </span>
+                        ) : (
+                            <span className="text-xs text-muted-foreground">Non disponible</span>
+                        )}
+                    </div>
+                )}
             </div>
         </Link>
     );
