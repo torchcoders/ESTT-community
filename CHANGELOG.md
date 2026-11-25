@@ -1,3 +1,11 @@
+# [1.44.0](https://github.com/torchcoders/ESTT-community/compare/v1.43.0...v1.44.0) (2026-11-25)
+
+
+### Features
+
+* improve resource module navigation ([9846fa9](https://github.com/torchcoders/ESTT-community/commit/9846fa98e1cfbfeaa41cb0cd41e8a46399bb3e68))
+* resource-module-navigation Merge PR[#62](https://github.com/torchcoders/ESTT-community/issues/62) ([e2ff132](https://github.com/torchcoders/ESTT-community/commit/e2ff13224abe2a766a68743026e85fa9f16beb3f))
+
 # [1.43.0](https://github.com/torchcoders/ESTT-community/compare/v1.42.0...v1.43.0) (2026-11-21)
 
 
