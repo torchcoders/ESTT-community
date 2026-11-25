@@ -1,19 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { db, ref, get, set, push, update, remove, runTransaction, onValue } from '@/lib/firebase';
+import { db as staticDb } from '@/lib/data';
 import { useAuth } from '@/context/AuthContext';
 import { useDialog } from '@/context/DialogContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, FileText, Link as LinkIcon, Download, ExternalLink, User, Share2, MessageCircle, Send, X, Flag, AlertTriangle, Star, Eye, Globe, ListPlus } from 'lucide-react';
+import { Loader2, FileText, Link as LinkIcon, Download, ExternalLink, User, Share2, MessageCircle, Send, X, Flag, AlertTriangle, Star, Eye, Globe, ListPlus, ChevronDown, Maximize2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import ResourceCard from '@/components/features/resources/ResourceCard';
 import Link from 'next/link';
+
+const MODULE_NAMES_BY_ID = Object.values(staticDb.modules)
+    .flat()
+    .reduce((names, module) => {
+        names[module.id] = module.name;
+        return names;
+    }, {});
+
+const normalizeModuleName = (name) => typeof name === 'string'
+    ? name.trim().replace(/\s+/g, ' ').toLowerCase()
+    : '';
 
 export default function ResourcePage() {
     const params = useParams();
@@ -23,6 +36,10 @@ export default function ResourcePage() {
     const { showWarning, showError, showSuccess } = useDialog();
 
     const [resource, setResource] = useState(null);
+    const [relatedResources, setRelatedResources] = useState([]);
+    const [isRelatedResourcesOpen, setIsRelatedResourcesOpen] = useState(false);
+    const [isPreviewFullscreen, setIsPreviewFullscreen] = useState(false);
+    const currentResourceCardRef = useRef(null);
     const [comments, setComments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -52,6 +69,20 @@ export default function ResourcePage() {
 
     // Preview availability for Google-hosted files
     const [previewAvailable, setPreviewAvailable] = useState(null);
+
+    useEffect(() => {
+        if (!isRelatedResourcesOpen) return;
+
+        const frame = requestAnimationFrame(() => {
+            currentResourceCardRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'center',
+            });
+        });
+
+        return () => cancelAnimationFrame(frame);
+    }, [isRelatedResourcesOpen, relatedResources, resourceId]);
 
     useEffect(() => {
         if (resourceId) {
@@ -192,6 +223,9 @@ export default function ResourcePage() {
     }, [user, resourceId, db]);
 
     const fetchResource = async () => {
+        setLoading(true);
+        setError('');
+        setResource(null);
         try {
             const resourceRef = ref(db, `resources/${resourceId}`);
             const snapshot = await get(resourceRef);
@@ -211,6 +245,61 @@ export default function ResourcePage() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (!resource) {
+            setRelatedResources([]);
+            return;
+        }
+
+        let cancelled = false;
+        const fetchRelatedResources = async () => {
+            const linkedModuleIds = Array.from(new Set([
+                ...(Array.isArray(resource.fields) ? resource.fields.map((field) => field.moduleId) : []),
+            ].filter((moduleId) => typeof moduleId === 'string' && moduleId.length > 0)));
+            const moduleId = typeof resource.moduleId === 'string' && resource.moduleId.length > 0
+                ? resource.moduleId
+                : linkedModuleIds.length === 1 ? linkedModuleIds[0] : null;
+            const moduleName = normalizeModuleName(MODULE_NAMES_BY_ID[moduleId] || resource.fullModuleName);
+
+            if (!moduleId) {
+                setRelatedResources([]);
+                return;
+            }
+
+            try {
+                const resourcesSnapshot = await get(ref(db, 'resources'));
+                const allResources = resourcesSnapshot.val() || {};
+
+                const moduleResources = Object.entries(allResources)
+                    .map(([id, data]) => ({ id, ...data }))
+                    .filter((candidate) => {
+                        if (candidate.unverified === true || !candidate.title) return false;
+                        if (!(candidate.url || candidate.link || candidate.file)) return false;
+
+                        const matchesModule = candidate.moduleId === moduleId ||
+                            (Array.isArray(candidate.fields) && candidate.fields.some((field) => field.moduleId === moduleId));
+                        if (!matchesModule) return false;
+
+                        const candidateModuleName = normalizeModuleName(
+                            MODULE_NAMES_BY_ID[candidate.moduleId] || candidate.fullModuleName
+                        );
+                        return !moduleName || !candidateModuleName || candidateModuleName === moduleName;
+                    });
+
+                if (!cancelled) setRelatedResources(moduleResources);
+            } catch (err) {
+                console.error('Error fetching resources from the same module:', err);
+                if (!cancelled) setRelatedResources([]);
+            }
+        };
+
+        fetchRelatedResources();
+        return () => {
+            cancelled = true;
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [resource?.id]);
 
     const fetchComments = async () => {
         try {
@@ -586,6 +675,20 @@ export default function ResourcePage() {
         return url;
     };
 
+    const renderFullscreenButton = () => (
+        <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            aria-label="Ouvrir l’aperçu en plein écran"
+            onClick={() => setIsPreviewFullscreen(true)}
+            className="absolute right-3 top-3 z-10 gap-2 shadow-md"
+        >
+            <Maximize2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Plein écran</span>
+        </Button>
+    );
+
     useEffect(() => {
         const downloadUrl = ensureProtocol(resource?.url || resource?.link || resource?.file);
         const proxyUrl = getPreviewProxyUrl(downloadUrl);
@@ -617,6 +720,15 @@ export default function ResourcePage() {
     }
 
     const downloadUrl = ensureProtocol(resource.url || resource.link || resource.file);
+    const currentResourceIndex = relatedResources.findIndex((item) => item.id === resourceId);
+    const youtubePreviewUrl = getYouTubeEmbedUrl(downloadUrl);
+    const workspacePreviewUrl = getGoogleWorkspaceEmbedUrl(downloadUrl);
+    const fullscreenPreviewUrl = youtubePreviewUrl ||
+        (isPdfUrl(downloadUrl)
+            ? (isGoogleHostedFile(downloadUrl)
+                ? (previewAvailable === false ? null : workspacePreviewUrl)
+                : `https://docs.google.com/gview?url=${encodeURIComponent(downloadUrl)}&embedded=true`)
+            : (previewAvailable === false ? null : workspacePreviewUrl));
 
     const handleDownload = async (e) => {
         e.preventDefault();
@@ -812,6 +924,52 @@ export default function ResourcePage() {
                                     )}
                                 </div>
                             </div>
+                            {relatedResources.length > 1 && currentResourceIndex !== -1 && (
+                                <section className="border-t pt-4" aria-label="Navigation dans le module">
+                                    <button
+                                        type="button"
+                                        aria-expanded={isRelatedResourcesOpen}
+                                        aria-controls="module-resource-list"
+                                        onClick={() => setIsRelatedResourcesOpen((isOpen) => !isOpen)}
+                                        className="flex w-full items-center justify-between gap-3 rounded-lg p-2 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    >
+                                        <span className="min-w-0">
+                                            <span className="block text-sm font-semibold">Ressources du module</span>
+                                            <span className="block text-xs text-muted-foreground">
+                                                {currentResourceIndex + 1} sur {relatedResources.length} · Faites défiler pour parcourir
+                                            </span>
+                                        </span>
+                                        <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${isRelatedResourcesOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {isRelatedResourcesOpen && (
+                                        <div
+                                            id="module-resource-list"
+                                            role="list"
+                                            aria-label="Ressources de ce module"
+                                            className="no-scrollbar mt-3 flex w-full snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-3"
+                                        >
+                                            {relatedResources.map((item) => {
+                                                const isCurrent = item.id === resourceId;
+                                                return (
+                                                    <div
+                                                        key={item.id}
+                                                        ref={isCurrent ? currentResourceCardRef : null}
+                                                        role="listitem"
+                                                        className="w-52 shrink-0 snap-center sm:w-56"
+                                                    >
+                                                        <ResourceCard
+                                                            resource={item}
+                                                            showFullTitle
+                                                            isCurrent={isCurrent}
+                                                            compact
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </section>
+                            )}
                         </div>
                     </CardHeader>
 
@@ -823,7 +981,8 @@ export default function ResourcePage() {
                         )}
 
                         {getYouTubeEmbedUrl(downloadUrl) && (
-                            <div className="aspect-video w-full rounded-lg overflow-hidden border shadow-sm">
+                            <div className="relative aspect-video w-full rounded-lg overflow-hidden border shadow-sm">
+                                {fullscreenPreviewUrl && renderFullscreenButton()}
                                 <iframe
                                     width="100%"
                                     height="100%"
@@ -837,7 +996,7 @@ export default function ResourcePage() {
                         )}
 
                         {!getYouTubeEmbedUrl(downloadUrl) && isPdfUrl(downloadUrl) && (
-                            <div className="w-full h-[60vh] sm:h-[600px] md:h-[700px] rounded-xl overflow-hidden border shadow-sm bg-muted transition-all hover:shadow-md">
+                            <div className="relative w-full h-[60vh] sm:h-[600px] md:h-[700px] rounded-xl overflow-hidden border shadow-sm bg-muted transition-all hover:shadow-md">
                                 {isGoogleHostedFile(downloadUrl) ? (
                                     previewAvailable === false ? (
                                         <div className="h-full flex flex-col items-center justify-center p-6 text-center">
@@ -851,24 +1010,30 @@ export default function ResourcePage() {
                                             </Button>
                                         </div>
                                     ) : (
+                                        <>
+                                            {fullscreenPreviewUrl && renderFullscreenButton()}
+                                            <iframe
+                                                width="100%"
+                                                height="100%"
+                                                src={getGoogleWorkspaceEmbedUrl(downloadUrl)}
+                                                title="PDF viewer"
+                                                frameBorder="0"
+                                                allowFullScreen
+                                            ></iframe>
+                                        </>
+                                    )
+                                ) : (
+                                    <>
+                                        {fullscreenPreviewUrl && renderFullscreenButton()}
                                         <iframe
                                             width="100%"
                                             height="100%"
-                                            src={getGoogleWorkspaceEmbedUrl(downloadUrl)}
+                                            src={`https://docs.google.com/gview?url=${encodeURIComponent(downloadUrl)}&embedded=true`}
                                             title="PDF viewer"
                                             frameBorder="0"
                                             allowFullScreen
                                         ></iframe>
-                                    )
-                                ) : (
-                                    <iframe
-                                        width="100%"
-                                        height="100%"
-                                        src={`https://docs.google.com/gview?url=${encodeURIComponent(downloadUrl)}&embedded=true`}
-                                        title="PDF viewer"
-                                        frameBorder="0"
-                                        allowFullScreen
-                                    ></iframe>
+                                    </>
                                 )}
                             </div>
                         )}
@@ -893,7 +1058,8 @@ export default function ResourcePage() {
                                     </Button>
                                 </div>
                             ) : (
-                                <div className="w-full h-[60vh] sm:h-[600px] md:h-[700px] rounded-xl overflow-hidden border shadow-sm bg-muted transition-all hover:shadow-md">
+                                <div className="relative w-full h-[60vh] sm:h-[600px] md:h-[700px] rounded-xl overflow-hidden border shadow-sm bg-muted transition-all hover:shadow-md">
+                                    {fullscreenPreviewUrl && renderFullscreenButton()}
                                     <iframe
                                         width="100%"
                                         height="100%"
@@ -982,6 +1148,32 @@ export default function ResourcePage() {
                         </Button>
                     </CardFooter>
                 </Card>
+
+                {fullscreenPreviewUrl && (
+                    <Dialog open={isPreviewFullscreen} onOpenChange={setIsPreviewFullscreen}>
+                        <DialogContent
+                            className="!fixed !left-0 !top-0 !h-[100dvh] !w-screen !max-w-none !translate-x-0 !translate-y-0 !gap-0 !rounded-none !border-0 !p-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden"
+                            overlayClassName="bg-black/90"
+                        >
+                            <DialogTitle className="sr-only">Aperçu en plein écran</DialogTitle>
+                            <DialogDescription className="sr-only">
+                                Aperçu agrandi de la ressource, sans quitter cette page.
+                            </DialogDescription>
+                            <div className="flex min-w-0 items-center border-b px-4 py-3 pr-14">
+                                <span className="truncate text-sm font-medium">{resource.title}</span>
+                            </div>
+                            <div className="min-h-0 bg-black">
+                                <iframe
+                                    src={fullscreenPreviewUrl}
+                                    title={`Aperçu de ${resource.title}`}
+                                    className="h-full w-full border-0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                />
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                )}
 
                 {/* Comments Section */}
                 <Card className="shadow-md">
